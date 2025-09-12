@@ -60,6 +60,22 @@ if (!empty($author_ids)) {
     }
 }
 
+$artikel_per_user = [];
+$query_user_articles = "SELECT u.id, u.username, COUNT(a.id) as jumlah_artikel 
+                       FROM user u 
+                       LEFT JOIN articles a ON u.id = a.author_id 
+                       GROUP BY u.id, u.username 
+                       HAVING jumlah_artikel > 0 
+                       ORDER BY jumlah_artikel DESC 
+                       LIMIT 10";
+$result_user_articles = mysqli_query($conn, $query_user_articles);
+
+if ($result_user_articles) {
+    while ($row = mysqli_fetch_assoc($result_user_articles)) {
+        $artikel_per_user[] = $row;
+    }
+}
+
 $active_page = basename($_SERVER['PHP_SELF']);
 ?>
 
@@ -268,12 +284,13 @@ function confirmDelete(articleId) {
     <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
-          <div class="relative">
-            <input type="text" placeholder="Cari artikel, pengguna..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-transparent">
-            <div class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-400">
-              <i class="ri-search-line text-sm"></i>
+            <div class="relative">
+              <input id="searchInput" type="text" placeholder="Cari artikel, pengguna..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg w-80 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-transparent" autocomplete="off">
+              <div class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 flex items-center justify-center text-gray-400">
+                <i class="ri-search-line text-sm"></i>
+              </div>
+              <div id="searchResults" class="absolute z-50 bg-white border border-gray-300 rounded-lg shadow-lg mt-1 w-full max-h-96 overflow-y-auto hidden"></div>
             </div>
-          </div>
         </div>
         <div class="flex items-center gap-4">
           <button class="relative p-2 text-gray-600 hover:text-primary hover:bg-primary/5 rounded-md transition-colors">
@@ -420,17 +437,6 @@ function confirmDelete(articleId) {
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="text-lg font-semibold text-gray-900">Trend Artikel Dilihat</h3>
-            <select class="text-sm border border-gray-300 rounded-lg px-3 py-1 pr-8">
-              <option>7 Hari Terakhir</option>
-              <option>30 Hari Terakhir</option>
-              <option>3 Bulan Terakhir</option>
-            </select>
-          </div>
-          <div id="lineChart" style="height: 300px;"></div>
-        </div>
-        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
     <div class="flex items-center justify-between mb-6">
         <h3 class="text-lg font-semibold text-gray-900">Kategori Artikel</h3>
     </div>
@@ -540,7 +546,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </button>
             </div>
             
-            <form id="editForm" class="space-y-4">
+            <form id="editForm" class="space-y-4" enctype="multipart/form-data">
                 <input type="hidden" id="editArticleId" name="id">
                 
                 <div>
@@ -566,6 +572,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     <textarea id="editContent" name="content" rows="8"
                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"></textarea>
                 </div>
+
+                <div>
+                    <label for="editImage" class="block text-sm font-medium text-gray-700 mb-1">Ganti Foto Artikel</label>
+                    <input type="file" id="editImage" name="image" accept="image/*" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <div id="imagePreview" class="mt-2"></div>
+                </div>
                 
                 <div class="flex justify-end space-x-3 pt-4">
                     <button type="button" onclick="closeEditModal()" 
@@ -581,51 +593,21 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
-<script id="lineChartScript">
-document.addEventListener('DOMContentLoaded', function() {
-  const lineChart = echarts.init(document.getElementById('lineChart'));
-  const lineOption = {
-    animation: false,
-    grid: { top: 0, right: 0, bottom: 0, left: 0 },
-    xAxis: {
-      type: 'category',
-      data: ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'],
-      axisLine: { show: false },
-      axisTick: { show: false }
-    },
-    yAxis: {
-      type: 'value',
-      axisLine: { show: false },
-      axisTick: { show: false },
-      splitLine: { lineStyle: { color: '#f3f4f6' } }
-    },
-    series: [{
-      data: [8200, 9100, 7800, 8900, 9500, 8700, 9200],
-      type: 'line',
-      smooth: true,
-      symbol: 'none',
-      lineStyle: { color: 'rgba(87, 181, 231, 1)', width: 3 },
-      areaStyle: {
-        color: {
-          type: 'linear',
-          x: 0, y: 0, x2: 0, y2: 1,
-          colorStops: [
-            { offset: 0, color: 'rgba(87, 181, 231, 0.1)' },
-            { offset: 1, color: 'rgba(87, 181, 231, 0.01)' }
-          ]
-        }
-      }
-    }],
-    tooltip: {
-      trigger: 'axis',
-      backgroundColor: 'rgba(255, 255, 255, 0.9)',
-      borderColor: '#e5e7eb',
-      textStyle: { color: '#1f2937' }
+
+<script>
+document.getElementById('editImage').addEventListener('change', function(event) {
+    const preview = document.getElementById('imagePreview');
+    preview.innerHTML = '';
+    const file = event.target.files[0];
+    if (file) {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.classList.add('max-w-xs', 'h-auto', 'border', 'border-gray-300', 'rounded');
+        preview.appendChild(img);
     }
-  };
-  lineChart.setOption(lineOption);
 });
 </script>
+
 
 <script id="barChartScript">
 document.addEventListener('DOMContentLoaded', function() {
@@ -635,7 +617,15 @@ document.addEventListener('DOMContentLoaded', function() {
     grid: { top: 20, right: 20, bottom: 40, left: 80 },
     xAxis: {
       type: 'category',
-      data: ['Ahmad Rizki', 'Budi Santoso', 'Sari Dewi', 'Andi Pratama', 'Maya Indira', 'Reza Firmansyah'],
+      data: [
+        <?php
+        $userNames = [];
+        foreach ($artikel_per_user as $user) {
+            $userNames[] = "'" . addslashes($user['username']) . "'";
+        }
+        echo implode(',', $userNames);
+        ?>
+      ],
       axisLine: { show: false },
       axisTick: { show: false }
     },
@@ -646,7 +636,15 @@ document.addEventListener('DOMContentLoaded', function() {
       splitLine: { lineStyle: { color: '#f3f4f6' } }
     },
     series: [{
-      data: [89, 76, 65, 58, 52, 47],
+      data: [
+        <?php
+        $articleCounts = [];
+        foreach ($artikel_per_user as $user) {
+            $articleCounts[] = $user['jumlah_artikel'];
+        }
+        echo implode(',', $articleCounts);
+        ?>
+      ],
       type: 'bar',
       itemStyle: {
         color: 'rgba(87, 181, 231, 1)',
@@ -667,106 +665,177 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const navLinks = document.querySelectorAll('nav a');
-  navLinks.forEach(link => {
-    link.addEventListener('click', function() {
-      navLinks.forEach(l => l.classList.remove('text-primary', 'bg-primary/10'));
-      this.classList.add('text-primary', 'bg-primary/10');
-    });
+  const searchInput = document.getElementById('searchInput');
+  const searchResults = document.getElementById('searchResults');
+
+  let timeout = null;
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(timeout);
+    const query = this.value.trim();
+
+    if (query.length < 2) {
+      searchResults.innerHTML = '';
+      searchResults.classList.add('hidden');
+      return;
+    }
+
+    timeout = setTimeout(() => {
+          fetch(`search.php?query=${encodeURIComponent(query)}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.length > 0) {
+                let html = `
+                  <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Judul Artikel</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Penulis</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tanggal</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Views</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                `;
+                data.forEach(article => {
+                  html += `
+                    <tr>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${article.title}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${article.author}</td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
+                          ${article.category.charAt(0).toUpperCase() + article.category.slice(1)}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${new Date(article.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${article.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                          ${article.status.charAt(0).toUpperCase() + article.status.slice(1)}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${article.views.toLocaleString()}</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium flex gap-2">
+                        <button onclick="openEditModalBySlug('${article.slug}')" title="Edit" class="text-primary hover:text-secondary">
+                          <i class="ri-edit-line"></i>
+                        </button>
+                        <button onclick="confirmDeleteBySlug('${article.slug}')" title="Hapus" class="text-red-600 hover:text-red-800">
+                          <i class="ri-delete-bin-line"></i>
+                        </button>
+                        <button onclick="toggleStatusBySlug('${article.slug}')" title="Ubah Status" class="text-yellow-600 hover:text-yellow-800">
+                          <i class="ri-refresh-line"></i>
+                        </button>
+                        <button onclick="openArticleBySlug('${article.slug}')" title="Tinjau Artikel" class="text-gray-600 hover:text-gray-800">
+                          <i class="ri-link-m"></i>
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                });
+                html += '</tbody></table>';
+                searchResults.innerHTML = html;
+                searchResults.classList.remove('hidden');
+              } else {
+                searchResults.innerHTML = `<div class="px-4 py-2 text-gray-500">Tidak ada hasil</div>`;
+                searchResults.classList.remove('hidden');
+              }
+            })
+            .catch(err => {
+              console.error(err);
+              searchResults.innerHTML = `<div class="px-4 py-2 text-red-500">Terjadi kesalahan</div>`;
+              searchResults.classList.remove('hidden');
+            });
+    }, 300);
   });
 
-  const burgerMenu = document.querySelector('.burger-menu');
-  const sidebar = document.querySelector('.sidebar');
-  
-  burgerMenu.addEventListener('click', function(e) {
-    e.stopPropagation(); 
-    sidebar.classList.toggle('collapsed');
-  });
-
-  document.addEventListener('click', function() {
-    if (window.innerWidth < 768) {
-      sidebar.classList.add('collapsed');
+  document.addEventListener('click', function(e) {
+    if (!searchResults.contains(e.target) && e.target !== searchInput) {
+      searchResults.classList.add('hidden');
     }
   });
 });
-</script>
-<script>
-  function confirmDelete(articleId) {
-    Swal.fire({
-        title: 'Apakah Anda yakin?',
-        text: "Artikel yang dihapus tidak dapat dikembalikan!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Ya, Hapus!',
-        cancelButtonText: 'Tidak, Batalkan',
-        reverseButtons: true,
-        customClass: {
-            confirmButton: 'swal2-confirm',
-            cancelButton: 'swal2-cancel'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // Tampilkan loading indicator
-            Swal.fire({
-                title: 'Menghapus...',
-                html: 'Sedang menghapus artikel',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading()
-                }
-            });
 
-            // Kirim request AJAX untuk hapus artikel
-            fetch(`hapus_artikel.php?id=${articleId}`)
-                .then(response => response.json())
-                .then(data => {
-                    Swal.close();
-                    if (data.status === 'success') {
-                        Swal.fire({
-                            title: 'Berhasil!',
-                            text: data.message,
-                            icon: 'success',
-                            confirmButtonText: 'OK'
-                        }).then(() => {
-                            // Refresh halaman setelah berhasil hapus
-                            window.location.reload();
-                        });
-                    } else {
-                        Swal.fire({
-                            title: 'Gagal!',
-                            text: data.message,
-                            icon: 'error',
-                            confirmButtonText: 'OK'
-                        });
-                    }
-                })
-                .catch(error => {
-                    Swal.close();
-                    Swal.fire({
-                        title: 'Error!',
-                        text: 'Terjadi kesalahan saat menghapus artikel',
-                        icon: 'error',
-                        confirmButtonText: 'OK'
-                    });
-                });
-        }
-    });
+// Functions for actions by slug
+function openEditModalBySlug(slug) {
+  // Fetch article id by slug then open modal
+  fetch(`admin/get_article.php?slug=${encodeURIComponent(slug)}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const article = data.article;
+        document.getElementById('editArticleId').value = article.id;
+        document.getElementById('editTitle').value = article.title;
+        document.getElementById('editCategory').value = article.category;
+        document.getElementById('editContent').value = article.content;
+        // TODO: Load current image preview if needed
+        document.getElementById('editModal').classList.remove('hidden');
+      } else {
+        Swal.fire('Error', data.message, 'error');
+      }
+    })
+    .catch(() => Swal.fire('Error', 'Gagal memuat data artikel', 'error'));
 }
-</script>
-<script>
-  // Fungsi untuk modal edit
-let currentArticleId = null;
 
+function confirmDeleteBySlug(slug) {
+  // Fetch article id by slug then confirm delete
+  fetch(`admin/get_article.php?slug=${encodeURIComponent(slug)}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        confirmDelete(data.article.id);
+      } else {
+        Swal.fire('Error', data.message, 'error');
+      }
+    })
+    .catch(() => Swal.fire('Error', 'Gagal memuat data artikel', 'error'));
+}
+
+function toggleStatusBySlug(slug) {
+  // Fetch article id by slug then toggle status
+  fetch(`admin/get_article.php?slug=${encodeURIComponent(slug)}`)
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === 'success') {
+        const article = data.article;
+        const newStatus = article.status === 'published' ? 'draft' : 'published';
+        fetch('admin/update_status.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({id: article.id, status: newStatus})
+        })
+        .then(res => res.json())
+        .then(resp => {
+          if (resp.status === 'success') {
+            Swal.fire('Berhasil', resp.message, 'success').then(() => {
+              window.location.reload();
+            });
+          } else {
+            Swal.fire('Error', resp.message, 'error');
+          }
+        })
+        .catch(() => Swal.fire('Error', 'Gagal mengubah status', 'error'));
+      } else {
+        Swal.fire('Error', data.message, 'error');
+      }
+    })
+    .catch(() => Swal.fire('Error', 'Gagal memuat data artikel', 'error'));
+}
+
+function openArticleBySlug(slug) {
+  window.open(`artikel.php?slug=${encodeURIComponent(slug)}`, '_blank');
+}
+
+// Modal functions
 function openEditModal(articleId) {
-    currentArticleId = articleId;
-    
     // Tampilkan loading
     Swal.fire({
         title: 'Memuat...',
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading()
     });
-    
+
     // Ambil data artikel via AJAX
     fetch(`get_article.php?id=${articleId}`)
         .then(response => response.json())
@@ -778,7 +847,7 @@ function openEditModal(articleId) {
                 document.getElementById('editTitle').value = data.article.title;
                 document.getElementById('editCategory').value = data.article.category;
                 document.getElementById('editContent').value = data.article.content;
-                
+
                 // Tampilkan modal
                 document.getElementById('editModal').classList.remove('hidden');
             } else {
@@ -798,7 +867,7 @@ function closeEditModal() {
 // Handle form submit
 document.getElementById('editForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+
     // Tampilkan konfirmasi SweetAlert
     Swal.fire({
         title: 'Simpan Perubahan?',
@@ -812,14 +881,14 @@ document.getElementById('editForm').addEventListener('submit', function(e) {
         if (result.isConfirmed) {
             // Kirim data via AJAX
             const formData = new FormData(document.getElementById('editForm'));
-            
+
             // Tampilkan loading
             Swal.fire({
                 title: 'Menyimpan...',
                 allowOutsideClick: false,
                 didOpen: () => Swal.showLoading()
             });
-            
+
             fetch('update_article.php', {
                 method: 'POST',
                 body: formData
