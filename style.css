@@ -1,0 +1,136 @@
+ .accessibility-widget {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 9999;
+            touch-action: none; /* Important for drag on mobile */
+        }
+        
+        .accessibility-bubble {
+            width: 60px;
+            height: 60px;
+            background-color: #005baa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease;
+            user-select: none;
+        }
+        
+        .accessibility-bubble:hover {
+            transform: scale(1.1);
+        }
+        
+        .accessibility-bubble i {
+            color: white;
+            font-size: 24px;
+            pointer-events: none;
+        }
+        
+        .accessibility-menu {
+            position: absolute;
+            bottom: 70px;
+            right: 0;
+            width: 220px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 15px;
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            touch-action: none;
+        }
+        
+        .accessibility-menu.show {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .accessibility-option {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .accessibility-option:hover {
+            background-color: #f0f7ff;
+        }
+        
+        .accessibility-option i {
+            margin-right: 10px;
+            color: #005baa;
+            font-size: 18px;
+        }
+        
+        .accessibility-option span {
+            font-size: 14px;
+            color: #333;
+        }
+        
+        /* Accessibility Features */
+        .high-contrast {
+            background-color: #000 !important;
+            color: #fff !important;
+        }
+        
+        .high-contrast a {
+            color: #ffff00 !important;
+        }
+        
+        .light-background {
+            background-color: #f9f9f9 !important;
+            color: #333 !important;
+        }
+        
+        .links-underline a {
+            text-decoration: underline !important;
+        }
+        
+        .readable-font {
+            font-family: Arial, sans-serif !important;
+            line-height: 1.6 !important;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .accessibility-menu {
+                width: 200px;
+                right: -10px;
+            }
+            
+            .accessibility-bubble {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .accessibility-bubble i {
+                font-size: 20px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .accessibility-menu {
+                width: 180px;
+                padding: 10px;
+            }
+            
+            .accessibility-option {
+                padding: 6px 10px;
+            }
+            
+            .accessibility-option span {
+                font-size: 13px;
+            }
+        }

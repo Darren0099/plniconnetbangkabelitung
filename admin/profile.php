@@ -12,55 +12,24 @@ $user_id = $_SESSION['user']['id'];
 $error = '';
 $success = '';
 
-// Fungsi untuk upload gambar
-function uploadAvatar($file, $user_id) {
-    $target_dir = "uploads/avatars/";
-    if (!file_exists($target_dir)) {
-        mkdir($target_dir, 0777, true);
-    }
-    
-    $imageFileType = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-    $target_file = $target_dir . $user_id . '.' . $imageFileType;
-    
-    // Validasi gambar
-    $check = getimagesize($file['tmp_name']);
-    if ($check === false) {
-        return ['status' => 'error', 'message' => 'File bukan gambar'];
-    }
-    
-    // Cek ukuran file (max 2MB)
-    if ($file['size'] > 2000000) {
-        return ['status' => 'error', 'message' => 'Ukuran gambar terlalu besar (max 2MB)'];
-    }
-    
-    // Format yang diizinkan
-    $allowed = ['jpg', 'jpeg', 'png', 'gif'];
-    if (!in_array($imageFileType, $allowed)) {
-        return ['status' => 'error', 'message' => 'Hanya format JPG, JPEG, PNG & GIF yang diizinkan'];
-    }
-    
-    // Upload file
-    if (move_uploaded_file($file['tmp_name'], $target_file)) {
-        return ['status' => 'success', 'file_path' => $target_file];
-    } else {
-        return ['status' => 'error', 'message' => 'Gagal mengupload gambar'];
-    }
-}
 
-// Proses update profil
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
     
     if (empty($username)) {
         $error = 'Username tidak boleh kosong';
+    } elseif (empty($email)) {
+        $error = 'Email tidak boleh kosong';
     } else {
-        // Update username
-        $stmt = $conn->prepare("UPDATE users SET username = ? WHERE id = ?");
-        $stmt->bind_param("si", $username, $user_id);
+        
+        $stmt = $conn->prepare("UPDATE user SET username = ?, email = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $username, $email, $user_id);
         
         if ($stmt->execute()) {
-            // Update session
             $_SESSION['user']['username'] = $username;
+            $_SESSION['user']['email'] = $email;
             $success = 'Profil berhasil diperbarui';
         } else {
             $error = 'Gagal memperbarui profil: ' . $conn->error;
@@ -68,46 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
     }
 }
 
-// Proses upload avatar
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_avatar'])) {
-    if (isset($_FILES['avatar']) && $_FILES['avatar']['error'] === UPLOAD_ERR_OK) {
-        $upload = uploadAvatar($_FILES['avatar'], $user_id);
-        
-        if ($upload['status'] === 'success') {
-            // Update path avatar di database
-            $stmt = $conn->prepare("UPDATE users SET avatar = ? WHERE id = ?");
-            $stmt->bind_param("si", $upload['file_path'], $user_id);
-            
-            if ($stmt->execute()) {
-                $_SESSION['user']['avatar'] = $upload['file_path'];
-                $success = 'Avatar berhasil diupload';
-            } else {
-                $error = 'Gagal menyimpan path avatar';
-            }
-        } else {
-            $error = $upload['message'];
-        }
-    } else {
-        $error = 'Silakan pilih gambar untuk diupload';
-    }
-}
 
-// Proses hapus avatar
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_avatar'])) {
-    if (!empty($_SESSION['user']['avatar']) && file_exists($_SESSION['user']['avatar'])) {
-        unlink($_SESSION['user']['avatar']);
-    }
-    
-    $stmt = $conn->prepare("UPDATE users SET avatar = NULL WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    
-    if ($stmt->execute()) {
-        $_SESSION['user']['avatar'] = '';
-        $success = 'Avatar berhasil dihapus';
-    } else {
-        $error = 'Gagal menghapus avatar';
-    }
-}
 
 // Proses ubah password
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
@@ -154,6 +84,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
+
 // Update session dengan data terbaru
 $_SESSION['user'] = $user;
 ?>
@@ -166,32 +97,169 @@ $_SESSION['user'] = $user;
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css" rel="stylesheet">
     <style>
-        .main-content {
-            margin-left: 16rem; /* Sesuai lebar sidebar */
-        }
-        .avatar-preview {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            border: 3px solid #6366F1;
-            background-color: #f3f4f6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-        }
-        .avatar-upload input[type="file"] {
-            position: absolute;
+    /* Sidebar Animation */
+    #sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    #sidebar:not(.hidden) {
+        transform: translateX(0);
+    }
+
+    /* Burger Menu Animation */
+    .burger-menu {
+        transition: transform 0.3s ease;
+    }
+
+    .burger-menu.active i {
+        transform: rotate(90deg);
+    }
+
+    /* Navigation Link Animations */
+    nav a {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    nav a:hover {
+        transform: translateX(4px);
+    }
+
+    nav a::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0;
+        background: rgba(99, 102, 241, 0.1);
+        transition: width 0.3s ease;
+        border-radius: 8px;
+    }
+
+    nav a:hover::before {
+        width: 100%;
+    }
+
+    /* Button Animations */
+    button {
+        transition: all 0.2s ease;
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+    }
+
+    button:active {
+        transform: translateY(0);
+    }
+
+    /* Form Input Animations */
+    input, select, textarea {
+        transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        transform: scale(1.01);
+    }
+
+    /* Card Animation */
+    .card {
+        animation: slideInUp 0.5s ease-out;
+    }
+
+    @keyframes slideInUp {
+        from {
             opacity: 0;
-            width: 100%;
-            height: 100%;
-            cursor: pointer;
+            transform: translateY(20px);
         }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Loading Animation */
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+
+    /* Pulse Animation for Notifications */
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Page Load Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out forwards;
+        opacity: 0;
+    }
+
+    .animate-fade-in-left {
+        animation: fadeInLeft 0.6s ease-out forwards;
+        opacity: 0;
+    }
+
+    .animate-fade-in-right {
+        animation: fadeInRight 0.6s ease-out forwards;
+        opacity: 0;
+    }
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- Burger Menu for Mobile -->
+    <div class="md:hidden fixed top-4 right-4 z-40">
+        <button onclick="toggleSidebar()" class="p-2 bg-white rounded-lg shadow-md border border-gray-200 transition-all duration-300 hover:shadow-lg">
+            <i class="ri-menu-line text-gray-600 transition-transform duration-300"></i>
+        </button>
+    </div>
+
     <!-- Sidebar -->
-    <aside class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 z-30">
+    <aside id="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 z-30 hidden md:block">
         <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
             <div class="text-xl font-['Pacifico'] text-primary">logo</div>
             <span class="font-semibold text-gray-900">APLN</span>
@@ -209,7 +277,7 @@ $_SESSION['user'] = $user;
                 </div>
                 <span>Artikel</span>
             </a>
-            <a href="user-management.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($active_page == 'user-management.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
+            <a href="user.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($active_page == 'user.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
                 <div class="w-5 h-5 flex items-center justify-center">
                     <i class="ri-team-line"></i>
                 </div>
@@ -233,127 +301,106 @@ $_SESSION['user'] = $user;
     </aside>
 
     <!-- Main Content -->
-    <div class="main-content">
+    <div class="flex-1 ml-0 md:ml-64">
         <div class="p-8">
-            <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden animate-fade-in-up" style="animation-delay: 0.1s;">
                 <!-- Header -->
-                <div class="bg-primary p-6 text-white">
+                <div class="bg-primary p-6 text-white animate-fade-in-left" style="animation-delay: 0.2s;">
                     <h1 class="text-2xl font-bold">Informasi Pribadi</h1>
                     <p class="text-primary-100">Perbarui dan kelola detail profil APLN Anda</p>
                 </div>
-                
+
                 <!-- Notifikasi -->
                 <?php if (!empty($error)): ?>
-                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mx-6 mt-4">
+                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mx-6 mt-4 animate-fade-in-right" style="animation-delay: 0.3s;">
                         <p><?php echo htmlspecialchars($error); ?></p>
                     </div>
                 <?php endif; ?>
-                
+
                 <?php if (!empty($success)): ?>
-                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mx-6 mt-4">
+                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mx-6 mt-4 animate-fade-in-right" style="animation-delay: 0.3s;">
                         <p><?php echo htmlspecialchars($success); ?></p>
                     </div>
                 <?php endif; ?>
-                
+
                 <!-- Form Profil -->
-                <div class="p-6">
-                    <form method="POST" enctype="multipart/form-data">
-                        <!-- Avatar Section -->
-                        <div class="mb-8 text-center">
-                            <h2 class="text-lg font-semibold mb-4">Profile Picture</h2>
-                            <div class="flex flex-col items-center">
-                                <div class="avatar-preview mb-4">
-                                    <?php if (!empty($user['avatar']) && file_exists($user['avatar'])): ?>
-                                        <img src="<?php echo htmlspecialchars($user['avatar']); ?>" alt="Avatar">
-                                    <?php else: ?>
-                                        <i class="ri-user-fill text-6xl text-gray-400"></i>
-                                    <?php endif; ?>
-                                </div>
-                                <div class="flex gap-3">
-                                    <label class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary cursor-pointer">
-                                        <i class="ri-upload-line mr-2"></i> Unggah Avatar
-                                        <input type="file" name="avatar" accept="image/*" class="hidden" onchange="confirmAvatarUpload(this)">
-                                    </label>
-                                    <?php if (!empty($user['avatar'])): ?>
-                                        <button type="button" onclick="confirmDeleteAvatar()" class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700">
-                                            <i class="ri-delete-bin-line mr-2"></i> Hapus
-                                        </button>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </div>
-                        
+                <div class="p-6 animate-fade-in-up" style="animation-delay: 0.4s;">
+                    <form method="POST">
+                         <h2 class="text-lg font-semibold mb-4">Ubah Username</h2>
+                            <p class="text-gray-600 mb-6">Hi Selamat datang di Profile</p>
+
                         <!-- Informasi Profil -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            <div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fade-in-up" style="animation-delay: 0.5s;">
+
+                            <div class="animate-fade-in-left" style="animation-delay: 0.6s;">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Username *</label>
-                                <input type="text" name="username" value="<?php echo htmlspecialchars($user['username']); ?>" 
+                                <input type="text" name="username" value="<?php echo htmlspecialchars($user['username']); ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
                             </div>
-                            
-                            <div>
+
+                            <div class="animate-fade-in-right" style="animation-delay: 0.7s;">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <input type="email" value="<?php echo htmlspecialchars($user['email']); ?>" 
-                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                                <input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
                             </div>
-                            
-                            <div>
+
+                            <div class="animate-fade-in-left" style="animation-delay: 0.8s;">
                                 <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                                <input type="text" value="<?php echo htmlspecialchars(ucfirst($user['role'])); ?>" 
+                                <input type="text" value="<?php echo htmlspecialchars(ucfirst($user['role'])); ?>"
                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
                             </div>
                         </div>
-                        
-                        <div class="flex justify-end gap-3">
+
+                        <div class="flex justify-end gap-3 animate-fade-in-up" style="animation-delay: 0.9s;">
                             <!-- Tombol Atur Ulang -->
-                            <button type="button" onclick="confirmResetForm()" 
+                            <button type="button" onclick="confirmResetForm()"
                                     class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
                                 <i class="ri-arrow-go-back-line mr-2"></i> Atur Ulang
                             </button>
-                            
+
                             <!-- Tombol Simpan Perubahan (ditambahkan) -->
-                           <button type="submit" name="update_profile" 
+                           <button type="submit" name="update_profile"
                                     class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
                                 <i class="ri-save-line mr-2"></i> Simpan Perubahan
                             </button>
                         </div>
                     </form>
-                    
+
                     <!-- Ubah Password -->
-                    <div class="mt-12 pt-8 border-t border-gray-200">
+                    <div class="mt-12 pt-8 border-t border-gray-200 animate-fade-in-up" style="animation-delay: 1.0s;">
                         <h2 class="text-lg font-semibold mb-4">Ubah Kata Sandi</h2>
                         <p class="text-gray-600 mb-6">Pastikan kata sandi baru Anda kuat dan aman.</p>
-                        
+
                         <form id="passwordForm" method="POST">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in-up" style="animation-delay: 1.1s;">
+                                <div class="animate-fade-in-left" style="animation-delay: 1.2s;">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Password Sekarang *</label>
-                                    <input type="password" name="current_password" placeholder="Masukkan password saat ini" 
+                                    <input type="password" name="current_password" placeholder="Masukkan password saat ini"
                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
                                 </div>
-                                
-                                <div>
+
+                                <div class="animate-fade-in-right" style="animation-delay: 1.3s;">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Password Baru *</label>
-                                    <input type="password" name="new_password" placeholder="Masukkan password baru" 
+                                    <input type="password" name="new_password" placeholder="Masukkan password baru"
                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
                                 </div>
-                                
-                                <div>
+
+                                <div class="animate-fade-in-left" style="animation-delay: 1.4s;">
                                     <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru *</label>
-                                    <input type="password" name="confirm_password" placeholder="Konfirmasi password baru" 
+                                    <input type="password" name="confirm_password" placeholder="Konfirmasi password baru"
                                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
                                 </div>
                             </div>
-                            
-                            <div class="flex justify-end gap-3 mt-6">
+
+                            <div class="flex justify-end gap-3 mt-6 animate-fade-in-up" style="animation-delay: 1.5s;">
                                 <!-- Tombol Atur Ulang -->
-                                <button type="button" onclick="confirmResetPasswordForm()" 
+                                <button type="button" onclick="confirmResetPasswordForm()"
                                         class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
                                     <i class="ri-arrow-go-back-line mr-2"></i> Atur Ulang
                                 </button>
-                                
+
                                 <!-- Tombol Simpan Perubahan (ditambahkan) -->
-                                <button type="submit" name="update_profile" 
+                                <button type="submit" name="change_password"
                                         class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
                                     <i class="ri-save-line mr-2"></i> Simpan Perubahan
                                 </button>
@@ -361,7 +408,7 @@ $_SESSION['user'] = $user;
                         </form>
                     </div>
                 </div>
-                
+
             </div>
         </div>
     </div>
@@ -431,73 +478,7 @@ $_SESSION['user'] = $user;
         });
     }
 
-    // Konfirmasi Hapus Avatar
-    function confirmDeleteAvatar() {
-        Swal.fire({
-            title: 'Hapus Avatar?',
-            text: 'Avatar akan dihapus permanen',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Hapus',
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = '<input type="hidden" name="delete_avatar" value="1">';
-                document.body.appendChild(form);
-                form.submit();
-            }
-        });
-    }
 
-    // Konfirmasi Upload Avatar
-    function confirmAvatarUpload(input) {
-        if (input.files && input.files[0]) {
-            const file = input.files[0];
-            const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
-            
-            if (!validTypes.includes(file.type)) {
-                Swal.fire('Error!', 'Hanya format JPG, PNG, dan GIF yang diizinkan', 'error');
-                input.value = '';
-                return;
-            }
-            
-            if (file.size > 2000000) {
-                Swal.fire('Error!', 'Ukuran gambar maksimal 2MB', 'error');
-                input.value = '';
-                return;
-            }
-            
-            Swal.fire({
-                title: 'Upload Avatar?',
-                html: `Anda yakin ingin mengupload <strong>${file.name}</strong> sebagai avatar baru?`,
-                icon: 'question',
-                showCancelButton: true,
-                confirmButtonText: 'Ya, Upload',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.enctype = 'multipart/form-data';
-                    
-                    const inputClone = document.createElement('input');
-                    inputClone.type = 'file';
-                    inputClone.name = 'avatar';
-                    const dataTransfer = new DataTransfer();
-                    dataTransfer.items.add(file);
-                    inputClone.files = dataTransfer.files;
-                    
-                    form.appendChild(inputClone);
-                    document.body.appendChild(form);
-                    form.submit();
-                } else {
-                    input.value = '';
-                }
-            });
-        }
-    }
 
     // Konfirmasi Reset Form
     function confirmResetForm() {
@@ -586,5 +567,76 @@ document.getElementById('passwordForm').addEventListener('submit', function(e) {
     }
 });
     </script>
+
+<script>
+    // Show SweetAlert when email is changed
+    document.querySelector('input[name="email"]').addEventListener('change', function() {
+        Swal.fire({
+            icon: 'info',
+            title: 'Email diubah',
+            text: 'Anda telah mengubah email Anda.',
+            confirmButtonText: 'OK'
+        });
+    });
+</script>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const burgerBtn = document.querySelector('.md\\:hidden button');
+
+        sidebar.classList.toggle('hidden');
+
+        // Add burger menu animation
+        if (burgerBtn) {
+            burgerBtn.classList.toggle('active');
+        }
+    }
+
+    // Add page load animation
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate burger menu
+        const burgerMenu = document.querySelector('.md\\:hidden');
+        if (burgerMenu) {
+            burgerMenu.classList.add('animate-fade-in-right');
+            setTimeout(() => burgerMenu.style.animationDelay = '0s', 100);
+        }
+
+        // Animate sidebar
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.classList.add('animate-fade-in-left');
+            setTimeout(() => sidebar.style.animationDelay = '0.2s', 100);
+        }
+
+        // Animate main content
+        const mainContent = document.querySelector('.flex-1');
+        if (mainContent) {
+            mainContent.classList.add('animate-fade-in-up');
+            setTimeout(() => mainContent.style.animationDelay = '0.4s', 100);
+        }
+
+        // Animate header
+        const header = document.querySelector('.bg-primary');
+        if (header) {
+            header.classList.add('animate-fade-in-up');
+            setTimeout(() => header.style.animationDelay = '0.6s', 100);
+        }
+
+        // Animate form sections
+        const formSections = document.querySelectorAll('form, .mt-12');
+        formSections.forEach((section, index) => {
+            section.classList.add('animate-fade-in-up');
+            setTimeout(() => section.style.animationDelay = `${0.8 + index * 0.2}s`, 100);
+        });
+
+        // Animate buttons
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach((button, index) => {
+            button.classList.add('animate-fade-in-up');
+            setTimeout(() => button.style.animationDelay = `${1.2 + index * 0.1}s`, 100);
+        });
+    });
+</script>
 </body>
 </html>

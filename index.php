@@ -1,7 +1,17 @@
 <?php
 session_start();
 include 'admin/koneksi.php';
+if (isset($_GET['lang'])) {
+    $lang = $_GET['lang'] === 'en' ? 'en' : 'id'; // default ID
+    $_SESSION['lang'] = $lang;
+    header("Location: " . strtok($_SERVER["REQUEST_URI"], '?')); // reload tanpa parameter
+    exit;
+}
 
+// Set default bahasa
+if (!isset($_SESSION['lang'])) {
+    $_SESSION['lang'] = 'id';
+}
 function isImage($filename) {
     $ext = pathinfo($filename, PATHINFO_EXTENSION);
     $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -12,14 +22,12 @@ $showWelcome = $_SESSION['show_welcome'] ?? false;
 $username = $_SESSION['user']['username'] ?? null;
 unset($_SESSION['show_welcome']);
 
-// Query slider - tambahkan field slug
 $slider_berita = mysqli_query($conn, "SELECT id, slug, title, featured_image, category, content, created_at FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT 3");
 $slider_data = mysqli_fetch_all($slider_berita, MYSQLI_ASSOC);
 
 $slider_ids = array_column($slider_data, 'id');
 $slider_ids_string = !empty($slider_ids) ? implode(',', $slider_ids) : '0';
 
-// Query berita terbaru - tambahkan field slug
 $berita_terbaru = mysqli_query($conn, "SELECT id, slug, title, featured_image, category, content, created_at FROM articles WHERE status = 'published' AND id NOT IN ($slider_ids_string) ORDER BY created_at DESC LIMIT 6");
 
 $kategori_query = mysqli_query($conn, "SELECT DISTINCT category FROM articles WHERE status = 'published' LIMIT 3");
@@ -69,13 +77,16 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PLN ICONNET</title>
     <script src="https://cdn.tailwindcss.com/3.4.16"></script>
+    
+    <link rel="icon" href="/logo/plnv2.png" type="image/png">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
                         primary: '#1A3B7A',
-                        secondary: '#2563EB'
+                        secondary: '#2563EB',
+                        blue: '#b1dcf2'
                     },
                     borderRadius: {
                         'none': '0px',
@@ -94,9 +105,12 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
         }
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :where([class^="ri-"])::before { content: "\f3c2"; }
            .welcome-notification {
@@ -115,15 +129,45 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
             animation: slideIn 0.5s ease-out, fadeOut 0.5s ease-in 3s forwards;
         }
         
+.footer-image img {
+  width: 100%;          /* Penuhi lebar layar */
+  height: auto;         /* Jaga rasio gambar */
+  display: block;       /* Hilangkan spasi kosong bawah */
+}
+
+
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        
+
         @keyframes fadeOut {
             from { opacity: 1; }
             to { opacity: 0; }
         }
+
+        @keyframes slideUp {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(50px);
+            transition: all 0.8s ease-out;
+        }
+
+        .animate-on-scroll.animate {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .animate-delay-1 { transition-delay: 0.1s; }
+        .animate-delay-2 { transition-delay: 0.2s; }
+        .animate-delay-3 { transition-delay: 0.3s; }
+        .animate-delay-4 { transition-delay: 0.4s; }
+        .animate-delay-5 { transition-delay: 0.5s; }
+        .animate-delay-6 { transition-delay: 0.6s; }
     </style>
 </head>
 <body class="bg-white">
@@ -132,97 +176,416 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
         <i class="ri-checkbox-circle-fill"></i>
         <span>Selamat datang, <?= htmlspecialchars($username) ?>!</span>
     </div>
-    <header class="w-full bg-white shadow-sm border-b border-gray-200">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0 flex items-center">
-                        <div class="w-12 h-12 flex items-center justify-center">
-                            <i class="ri-graduation-cap-fill text-primary text-2xl"></i>
-                        </div>
-                        <span class="ml-3 text-xl font-bold text-primary">PLN-ICONNET</span>
-                    </div>
-                    <nav class="hidden md:ml-10 md:flex md:space-x-8">
-                        <a href="#" class="text-gray-700 hover:text-primary px-3 py-2 text-sm font-medium">Beranda</a>
-                        <div class="relative group">
-                            <button class="text-gray-700 hover:text-primary px-3 py-2 text-sm font-medium flex items-center">
-                                Tentang ICONNET
-                                <div class="w-4 h-4 ml-1 flex items-center justify-center">
-                                    <i class="ri-arrow-down-s-line text-sm"></i>
-                                </div>
-                            </button>
-                            <div class="absolute left-0 mt-2 w-48 bg-white rounded shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Sejarah</a>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Visi & Misi</a>
-                                <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">Pimpinan</a>
-                            </div>
-                        </div>
-                        <a href="#" class="text-gray-700 hover:text-primary px-3 py-2 text-sm font-medium">Akademik</a>
-                    </nav>
-                </div>
-                <div class="flex items-center space-x-4">
-                   <div class="flex items-center space-x-4">
-    <div class="relative">
-        <input type="text" placeholder="Cari..." class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
-        <div class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 flex items-center justify-center">
-            <i class="ri-search-line text-gray-400 text-sm"></i>
-        </div>
-    </div>
+    <?php endif; ?>
+    <style>
+     
+  body, html {
+    margin: 0; padding: 0; box-sizing: border-box;
+    overflow-x: hidden;
+  }
+  header {
+    background: white;
+    border-bottom: 1px solid #e5e7eb;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    width: 100%;
+  }
 
-<div class="user-section">
+  #scrollUpBtn {
+    position: fixed;
+    bottom: -70px;
+    right: 20px;
+    width: 56px;
+    height: 56px;
+    background-color: #FFC107;
+    border: none;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.4s ease;
+    z-index: 9999;
+}
+#scrollUpBtn svg {
+    width: 60%;
+    height: 60%;
+}
+#scrollUpBtn.show {
+    bottom: 20px;
+    opacity: 1;
+}
+@media (max-width: 480px) {
+    #scrollUpBtn {
+        width: 46px;
+        height: 46px;
+    }
+}
+  .container {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 0 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+  }
+  .logo img {
+    height: 36px;
+    width: auto;
+  }
+  /* Search box */
+  .search-wrapper {
+    flex: 1 1 200px;
+    max-width: 400px;
+    margin: 0 1rem;
+    position: relative;
+  }
+  .search-wrapper input {
+    width: 100%;
+    padding: 6px 10px 6px 32px;
+    border: 1px solid #ccc;
+    border-radius: 9999px;
+    font-size: 14px;
+  }
+  .search-wrapper i {
+    position: absolute;
+    top: 50%;
+    left: 10px;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    font-size: 16px;
+  }
+
+  /* Language & Burger container */
+  .right-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .lang-buttons button {
+    background: none;
+    border: none;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .lang-buttons span {
+    color: #9ca3af;
+  }
+
+  /* Burger menu button */
+  #burger-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 24px;
+    /* display: none; */ /* Make burger button visible on all screen sizes */
+  }
+
+  #mobile-menu .username {
+    color: #005baa;
+    font-weight: 600;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+#mobile-menu .login-btn {
+    display: block;
+    background-color: #005baa;
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    text-align: center;
+    margin-top: 10px;
+}
+
+#mobile-menu .logout-btn {
+    display: block;
+    background-color: #f1f1f1;
+    color: #333;
+    padding: 8px 15px;
+    border-radius: 20px;
+    text-align: center;
+    margin-top: 5px;
+}
+
+#mobile-menu .user-menu-item {
+    color: #005baa;
+    font-weight: 600;
+    border-bottom: none !important;
+    padding-top: 15px !important;
+}
+  #mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    width: 280px;
+    background: white;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+    z-index: 1200;
+    padding: 1rem;
+    flex-direction: column;
+  }
+  #mobile-menu.open, #mobile-menu.mobile-menu-open {
+    display: flex;
+    transform: translateX(0);
+  }
+  /* Slide main content when menu open */
+  .content-shifted {
+    transform: translateX(280px);
+    transition: transform 0.3s ease;
+  }
+  #mobile-menu a {
+    display: block;
+    padding: 0.75rem 0;
+    color: #374151;
+    text-decoration: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  #mobile-menu a:hover {
+    color: #2563eb;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container {
+      height: 48px;
+      padding: 0 0.5rem;
+    }
+    .search-wrapper {
+      flex: 1 1 auto;
+      max-width: none;
+      margin: 0 0.5rem 0 0.5rem;
+    }
+    .lang-buttons {
+      display: none; /* Sembunyikan tombol bahasa di mobile jika sempit */
+    }
+  }
+ 
+ 
+    </style>
+<header>
+  <div class="container">
+    <div class="logo">
+      <a href="#">
+        <img src="logo/ICONNET.png" alt="PLN ICONNET Logo" />
+      </a>
+    </div>
+    <button id="scrollUpBtn">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="#454545" viewBox="0 0 256 256">
+        <path d="M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z"></path>
+    </svg>
+</button>
+     <div class="relative flex-grow max-w-xs">
+                    <input id="searchInput" type="text" placeholder="Cari artikel..."
+                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full">
+                    <div class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 flex items-center justify-center">
+                        <i class="ri-search-line text-gray-400 text-sm"></i>
+                    </div>
+                    <!-- Popup hasil pencarian -->
+                    <div id="searchResults" class="absolute top-full left-0 w-full bg-white shadow-lg rounded-md mt-1 hidden z-50">
+                        <!-- hasil pencarian muncul di sini -->
+                    </div>
+     </div>
+
+    <div class="right-controls">
+      <div class="lang-buttons">
+        <button id="btn-id">ID</button>
+        <span>|</span>
+        <button id="btn-en">EN</button>
+      </div>
+
+      <div class="user-section hidden sm:flex items-center">
+                    <?php if (isset($_SESSION['user'])): ?>
+                        <span class="username text-sm mr-3"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
+                        <a href="admin/logout.php" class="logout-btn bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition">Logout</a>
+                    <?php else: ?>
+                        <a href="admin/index.php" class="login-btn bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded-full text-sm transition">Login</a>
+                    <?php endif; ?>
+        </div>
+
+            <button id="burger-btn" aria-label="Toggle Menu" style="margin-right: 10px;">
+                <i class="ri-menu-line"></i>
+            </button>
+    </div>
+  </div>
+
+    <nav id="mobile-menu">
+      <button id="mobile-menu-close-btn" aria-label="Close Menu" class="mb-4 self-end text-gray-600 hover:text-gray-900 text-2xl font-bold">&times;</button>
+    <a href="index.php">Beranda</a>
+    <a href="#">Tentang ICONNET</a>
+    <a href="#">Sejarah</a>
+    <a href="#">Visi & Misi</a>
+    <a href="#">Pimpinan</a>
     <?php if (isset($_SESSION['user'])): ?>
-        <span class="username"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
+        <a href="#" class="user-menu-item">
+            <span class="username"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
+        </a>
         <a href="admin/logout.php" class="logout-btn">Logout</a>
     <?php else: ?>
         <a href="admin/index.php" class="login-btn">Login</a>
     <?php endif; ?>
-</div>
-    
-    <div class="flex items-center space-x-2">
-        <button class="px-2 py-1 text-sm text-primary font-medium">ID</button>
-        <span class="text-gray-300">|</span>
-        <button class="px-2 py-1 text-sm text-gray-500">EN</button>
+</nav>
+</header>
+
+<script>
+  const burgerBtn = document.getElementById('burger-btn');
+  const mobileMenu = document.getElementById('mobile-menu');
+  // Change mainContent selector to the container div inside header for better layout control
+  const mainContent = document.querySelector('header .container');
+
+  burgerBtn.addEventListener('click', () => {
+    mobileMenu.classList.toggle('mobile-menu-open');
+    if (mainContent) {
+      mainContent.classList.toggle('content-shifted');
+    }
+  });
+
+  const mobileMenuCloseBtn = document.getElementById('mobile-menu-close-btn');
+  if (mobileMenuCloseBtn) {
+    mobileMenuCloseBtn.addEventListener('click', () => {
+      mobileMenu.classList.remove('mobile-menu-open');
+      if (mainContent) {
+        mainContent.classList.remove('content-shifted');
+      }
+    });
+  }
+
+  // Add smooth transition for mainContent shifting
+  if (mainContent) {
+    mainContent.style.transition = 'transform 0.4s ease';
+  }
+</script>
+
+
+
+      <section class="relative h-[600px] overflow-hidden animate-on-scroll">
+    <div class="slider-container relative h-full">
+        <?php foreach ($slider_data as $index => $slide): ?>
+        <div class="slide absolute inset-0 <?= $index === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0' ?> transition-opacity duration-500 ease-in-out" 
+             style="background-image: url('admin/uploads/articles/<?= htmlspecialchars(basename($slide['featured_image'])) ?>'); background-size: cover; background-position: center;">
+            <div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/60 to-transparent"></div>
+            <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-end pb-24">
+                <div class="text-white max-w-3xl">
+                    <div class="text-sm font-medium mb-2 opacity-90"><?= htmlspecialchars($slide['category']) ?></div>
+                    <h1 class="text-4xl md:text-5xl font-bold mb-4"><?= htmlspecialchars($slide['title']) ?></h1>
+                    <p class="text-lg opacity-90 mb-6"><?= substr(strip_tags(htmlspecialchars($slide['content'])), 0, 150) ?>...</p>
+                    <a href="artikel.php?slug=<?= urlencode($slide['slug']) ?>" class="inline-block bg-white text-primary px-6 py-2 rounded-md font-medium hover:bg-opacity-90 transition">Baca Selengkapnya</a>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
     </div>
-    <button class="md:hidden w-8 h-8 flex items-center justify-center">
-        <i class="ri-menu-line text-xl"></i>
+
+  
+    <button class="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white bg-opacity-30 hover:bg-opacity-50 rounded-full text-white transition-all z-20" id="prevSlide">
+        <i class="ri-arrow-left-s-line text-2xl"></i>
     </button>
-</div>
-                </div>
-            </div>
-        </div>
-    </header>
+    <button class="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white bg-opacity-30 hover:bg-opacity-50 rounded-full text-white transition-all z-20" id="nextSlide">
+        <i class="ri-arrow-right-s-line text-2xl"></i>
+    </button>
 
-    <section class="relative h-[600px] overflow-hidden">
-        <div class="slider-container relative h-full">
-            <?php foreach ($slider_data as $index => $slide): ?>
-            <div class="slide absolute inset-0 <?= $index === 0 ? 'opacity-100' : 'opacity-0' ?> transition-opacity duration-500" 
-                 style="background-image: url('admin/uploads/articles/<?= htmlspecialchars(basename($slide['featured_image'])) ?>'); background-size: cover; background-position: center;">
-                <div class="absolute inset-0 bg-gradient-to-t from-primary via-primary/60 to-transparent"></div>
-                <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-end pb-24">
-                    <div class="text-white max-w-3xl">
-                        <div class="text-sm font-medium mb-2 opacity-90"><?= htmlspecialchars($slide['category']) ?></div>
-                        <h1 class="text-4xl md:text-5xl font-bold mb-4"><?= htmlspecialchars($slide['title']) ?></h1>
-                        <p class="text-lg opacity-90 mb-6"><?= substr(strip_tags(htmlspecialchars($slide['content'])), 0, 150) ?>...</p>
-                    </div>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
+  
+    <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
+        <?php foreach ($slider_data as $index => $slide): ?>
+        <button class="w-3 h-3 rounded-full cursor-pointer focus:outline-none <?= $index === 0 ? 'bg-white' : 'bg-white bg-opacity-50' ?> dot-indicator" data-slide="<?= $index ?>"></button>
+        <?php endforeach; ?>
+    </div>
+</section>
 
-        <button class="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white bg-opacity-30 hover:bg-opacity-50 rounded-full text-white transition-all z-10" id="prevSlide">
-            <i class="ri-arrow-left-s-line text-2xl"></i>
-        </button>
-        <button class="absolute right-4 top-1/2 transform -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white bg-opacity-30 hover:bg-opacity-50 rounded-full text-white transition-all z-10" id="nextSlide">
-            <i class="ri-arrow-right-s-line text-2xl"></i>
-        </button>
-        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-10">
-            <?php foreach ($slider_data as $index => $slide): ?>
-            <div class="w-3 h-3 rounded-full cursor-pointer <?= $index === 0 ? 'bg-white' : 'bg-white bg-opacity-50' ?>" data-slide="<?= $index ?>"></div>
-            <?php endforeach; ?>
-        </div>
-    </section>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot-indicator');
+    const prevBtn = document.getElementById('prevSlide');
+    const nextBtn = document.getElementById('nextSlide');
+    let currentSlide = 0;
+    let slideInterval;
 
-<section class="py-16 bg-white">
+  
+    function initSlider() {
+        if (slides.length === 0) return;
+        
+   
+        startSlideInterval();
+        
+       
+        prevBtn.addEventListener('click', prevSlide);
+        nextBtn.addEventListener('click', nextSlide);
+        
+        dots.forEach(dot => {
+            dot.addEventListener('click', function() {
+                goToSlide(parseInt(this.getAttribute('data-slide')));
+            });
+        });
+        
+       
+        const sliderContainer = document.querySelector('.slider-container');
+        sliderContainer.addEventListener('mouseenter', pauseSlide);
+        sliderContainer.addEventListener('mouseleave', startSlideInterval);
+    }
+
+  
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.classList.toggle('opacity-100', i === index);
+            slide.classList.toggle('opacity-0', i !== index);
+            slide.classList.toggle('z-10', i === index);
+            slide.classList.toggle('z-0', i !== index);
+        });
+        
+        dots.forEach((dot, i) => {
+            dot.classList.toggle('bg-white', i === index);
+            dot.classList.toggle('bg-opacity-50', i !== index);
+        });
+    }
+
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+        resetSlideInterval();
+    }
+
+    function prevSlide() {
+        currentSlide = (currentSlide - 1 + slides.length) % slides.length;
+        showSlide(currentSlide);
+        resetSlideInterval();
+    }
+
+    function goToSlide(index) {
+        currentSlide = index;
+        showSlide(currentSlide);
+        resetSlideInterval();
+    }
+
+    function startSlideInterval() {
+        if (slides.length <= 1) return;
+        clearInterval(slideInterval);
+        slideInterval = setInterval(nextSlide, 2000); 
+    }
+
+    function pauseSlide() {
+        clearInterval(slideInterval);
+    }
+
+    function resetSlideInterval() {
+        pauseSlide();
+        startSlideInterval();
+    }
+
+    initSlider();
+});
+</script>
+
+<section class="py-16 bg-white animate-on-scroll">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Berita Utama (Headline) - Gambar di Kiri, Teks di Kanan -->
         <?php 
@@ -302,7 +665,7 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
     </div>
 </section>
 
-<section class="py-16 bg-white">
+<section class="py-16 bg-white animate-on-scroll">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <?php 
@@ -313,7 +676,7 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
                 $artikel_kategori = mysqli_query($conn, "SELECT * FROM articles WHERE status = 'published' AND category = '$category' ORDER BY created_at DESC LIMIT 3");
             ?>
             <div>
-                <h2 class="text-xl font-bold text-primary border-b-2 border-primary inline-block mb-6">
+                <h2 class="text-xl font-bold text-primary inline-block mb-6">
                     <?= htmlspecialchars($category) ?>
                 </h2>
                 
@@ -342,9 +705,9 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
                     </article>
                     <?php else: ?>
                     <article class="flex items-start space-x-4 border-t pt-4">
-                        <a href="artikel.php?id=<?= $row['id'] ?>" class="flex items-start space-x-4 w-full no-underline">
-                            <img src="<?= $image_path ?>" 
-                                 alt="<?= htmlspecialchars($row['title']) ?>" 
+                        <a href="artikel.php?slug=<?= urlencode($row['slug']) ?>" class="flex items-start space-x-4 w-full no-underline">
+                            <img src="<?= $image_path ?>"
+                                 alt="<?= htmlspecialchars($row['title']) ?>"
                                  class="w-20 h-16 object-cover rounded hover:opacity-90 transition-opacity">
                             <div class="flex-1">
                                 <h3 class="text-sm font-medium text-gray-900 hover:text-primary transition-colors">
@@ -368,186 +731,442 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
         </div>
     </div>
 </section>
-
-    <footer class="bg-primary text-white">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-                <div>
-                    <div class="flex items-center mb-6">
-                        <div class="w-12 h-12 flex items-center justify-center">
-                            <i class="ri-graduation-cap-fill text-white text-2xl"></i>
-                        </div>
-                        <span class="ml-3 text-xl font-bold">PLN ICONNET</span>
-                    </div>
-                    <p class="text-blue-100 mb-4">Kualitas dan kecepatan yang terus bertambah menjadi kebutuhan baik di rumah, kantor, dan banyak tempat lainnya membuat kami memberikan layanan terbaik untuk anda.</p>
-                    <div class="flex space-x-4">
-                        <a href="#" class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
-                            <i class="ri-facebook-fill"></i>
-                        </a>
-                        <a href="#" class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
-                            <i class="ri-twitter-fill"></i>
-                        </a>
-                        <a href="#" class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
-                            <i class="ri-instagram-fill"></i>
-                        </a>
-                        <a href="#" class="w-8 h-8 flex items-center justify-center bg-white bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
-                            <i class="ri-youtube-fill"></i>
-                        </a>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="text-lg font-semibold mb-4">Kontak</h3>
-                    <div class="space-y-3 text-blue-100">
-                        <div class="flex items-start space-x-3">
-                            <div class="w-5 h-5 flex items-center justify-center mt-0.5">
-                                <i class="ri-map-pin-line text-sm"></i>
-                            </div>
-                            <span class="text-sm">Jl. Demang Lebar Daun No.375, 20 Ilir D. IV, Kec. Ilir Tim. I, Kota Palembang, Sumatera Selatan 30131</span>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <div class="w-5 h-5 flex items-center justify-center">
-                                <i class="ri-phone-line text-sm"></i>
-                            </div>
-                            <span class="text-sm">(0274) 588688</span>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <div class="w-5 h-5 flex items-center justify-center">
-                                <i class="ri-mail-line text-sm"></i>
-                            </div>
-                            <span class="text-sm">info@PLN.ac.id</span>
-                        </div>
-                    </div>
-                </div>
-                <div>
-                    <h3 class="text-lg font-semibold mb-4">Tautan Cepat</h3>
-                    <ul class="space-y-2 text-blue-100">
-                        <li><a href="#" class="text-sm hover:text-white transition-colors">Portal Akademik</a></li>
-                        <li><a href="#" class="text-sm hover:text-white transition-colors">E-Learning</a></li>
-                        <li><a href="#" class="text-sm hover:text-white transition-colors">Perpustakaan Digital</a></li>
-                        <li><a href="#" class="text-sm hover:text-white transition-colors">Jurnal Elektronik</a></li>
-                        <li><a href="#" class="text-sm hover:text-white transition-colors">Sistem Informasi</a></li>
-                        <li><a href="#" class="text-sm hover:text-white transition-colors">Career Center</a></li>
-                    </ul>
-                </div>
-                <div>
-                    <h3 class="text-lg font-semibold mb-4">Newsletter</h3>
-                    <p class="text-blue-100 text-sm mb-4">Dapatkan informasi terbaru dari UGM langsung di email Anda</p>
-                    <div class="flex">
-                        <input type="email" placeholder="Email Anda" class="flex-1 px-4 py-2 text-gray-900 rounded-l focus:outline-none focus:ring-2 focus:ring-white">
-                        <button class="bg-white text-primary px-4 py-2 rounded-r hover:bg-gray-100 transition-colors !rounded-button whitespace-nowrap">
-                            <div class="w-5 h-5 flex items-center justify-center">
-                                <i class="ri-send-plane-line"></i>
-                            </div>
-                        </button>
-                    </div>
-                </div>
+  <div class="accessibility-widget" id="accessibilityWidget">
+        <div class="accessibility-menu" id="accessibilityMenu">
+            <div class="accessibility-option" id="increaseText">
+                <i class="bi bi-zoom-in"></i>
+                <span>Increase Text</span>
             </div>
-            <div class="border-t border-blue-600 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-                <p class="text-blue-100 text-sm">© 2025 PLN ICONNET. All Right Reserved.</p>
-                <div class="flex space-x-6 mt-4 md:mt-0">
-                    <a href="#" class="text-blue-100 text-sm hover:text-white transition-colors">Kebijakan Privasi</a>
-                    <a href="#" class="text-blue-100 text-sm hover:text-white transition-colors">Syarat & Ketentuan</a>
-                    <a href="#" class="text-blue-100 text-sm hover:text-white transition-colors">Sitemap</a>
-                </div>
+            <div class="accessibility-option" id="decreaseText">
+                <i class="bi bi-zoom-out"></i>
+                <span>Decrease Text</span>
+            </div>
+            <div class="accessibility-option" id="highContrast">
+                <i class="bi bi-contrast"></i>
+                <span>High Contrast</span>
+            </div>
+            <div class="accessibility-option" id="lightBackground">
+                <i class="bi bi-brightness-high"></i>
+                <span>Light Background</span>
+            </div>
+            <div class="accessibility-option" id="linksUnderline">
+                <i class="bi bi-link-45deg"></i>
+                <span>Links Underline</span>
+            </div>
+            <div class="accessibility-option" id="readableFont">
+                <i class="bi bi-fonts"></i>
+                <span>Readable Font</span>
+            </div>
+            <div class="accessibility-option" id="textToSpeech">
+                <i class="bi bi-soundwave"></i>
+                <span>Text to Speech</span>
+            </div>
+            <div class="accessibility-option" id="resetAccessibility">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                <span>Reset</span>
             </div>
         </div>
-    </footer>
+        <div class="accessibility-bubble" id="accessibilityBubble">
+            <i class="bi bi-universal-access"></i>
+        </div>
+    </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-           
-            const menuButton = document.querySelector('[class*="md:hidden"]');
-            const mobileMenu = document.createElement('div');
-            mobileMenu.className = 'md:hidden fixed inset-0 bg-white z-50 transform translate-x-full transition-transform duration-300';
-            mobileMenu.innerHTML = `
-                <div class="p-4">
-                    <div class="flex justify-between items-center mb-8">
-                        <span class="text-xl font-bold text-primary">UGM</span>
-                        <button id="close-menu" class="w-8 h-8 flex items-center justify-center">
-                            <i class="ri-close-line text-xl"></i>
-                        </button>
-                    </div>
-                    <nav class="space-y-4">
-                        <a href="#" class="block text-gray-700 hover:text-primary py-2">Beranda</a>
-                        <a href="#" class="block text-gray-700 hover:text-primary py-2">Tentang UGM</a>
-                        <a href="#" class="block text-gray-700 hover:text-primary py-2">Akademik</a>
-                        <a href="#" class="block text-gray-700 hover:text-primary py-2">Penelitian</a>
-                        <a href="#" class="block text-gray-700 hover:text-primary py-2">Kemahasiswaan</a>
-                        <a href="#" class="block text-gray-700 hover:text-primary py-2">Alumni</a>
-                    </nav>
-                </div>
-            `;
-            document.body.appendChild(mobileMenu);
+            const widget = document.getElementById('accessibilityWidget');
+            const bubble = document.getElementById('accessibilityBubble');
+            const menu = document.getElementById('accessibilityMenu');
+            const body = document.body;
+            let currentFontSize = 100;
+            let speechSynthesis = window.speechSynthesis;
+            let isSpeaking = false;
+            let speechUtterance = null;
+            let isDragging = false;
+            let offsetX, offsetY;
+            let startX, startY;
+            let startTime;
             
-            menuButton.addEventListener('click', function() {
-                mobileMenu.classList.remove('translate-x-full');
+            // Toggle menu visibility
+            bubble.addEventListener('click', function(e) {
+                if (isDragging) return;
+                e.stopPropagation();
+                menu.classList.toggle('show');
             });
             
-            document.getElementById('close-menu').addEventListener('click', function() {
-                mobileMenu.classList.add('translate-x-full');
+            // Close menu when clicking outside
+            document.addEventListener('click', function() {
+                menu.classList.remove('show');
             });
-
-            const slides = document.querySelectorAll('.slide');
-            const indicators = document.querySelectorAll('[data-slide]');
-            const prevButton = document.getElementById('prevSlide');
-            const nextButton = document.getElementById('nextSlide');
-            let currentSlide = 0;
-            let isAnimating = false;
             
-            function updateSlider(newIndex) {
-                if (isAnimating) return;
-                isAnimating = true;
+            // Prevent menu from closing when clicking inside
+            menu.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            // Drag functionality for mouse
+            bubble.addEventListener('mousedown', startDrag);
+            
+            // Drag functionality for touch
+            bubble.addEventListener('touchstart', function(e) {
+                // Prevent double-tap zoom
+                if (e.touches.length === 1) {
+                    startDrag(e);
+                }
+            }, { passive: false });
+            
+            function startDrag(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 
-                slides[currentSlide].classList.remove('opacity-100');
-                slides[currentSlide].classList.add('opacity-0');
-                indicators[currentSlide].classList.add('bg-opacity-50');
-                indicators[currentSlide].classList.remove('bg-opacity-100');
+                // Record start position and time for click detection
+                startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX;
+                startY = (e.type === 'mousedown') ? e.clientY : e.touches[0].clientY;
+                startTime = Date.now();
                 
-                currentSlide = newIndex;
+                isDragging = false; // Will be set to true after movement threshold
                 
-                slides[currentSlide].classList.remove('opacity-0');
-                slides[currentSlide].classList.add('opacity-100');
-                indicators[currentSlide].classList.remove('bg-opacity-50');
-                indicators[currentSlide].classList.add('bg-opacity-100');
+                // Get initial position
+                const rect = widget.getBoundingClientRect();
+                offsetX = ((e.type === 'mousedown') ? e.clientX : e.touches[0].clientX) - rect.left;
+                offsetY = ((e.type === 'mousedown') ? e.clientY : e.touches[0].clientY) - rect.top;
                 
-                setTimeout(() => {
-                    isAnimating = false;
-                }, 500);
+                // Add event listeners based on input type
+                if (e.type === 'mousedown') {
+                    document.addEventListener('mousemove', handleDragMove);
+                    document.addEventListener('mouseup', handleDragEnd);
+                } else {
+                    document.addEventListener('touchmove', handleDragMove, { passive: false });
+                    document.addEventListener('touchend', handleDragEnd);
+                }
+                
+                // Hide menu during potential drag
+                menu.classList.remove('show');
             }
             
-            function nextSlide() {
-                const newIndex = (currentSlide + 1) % slides.length;
-                updateSlider(newIndex);
-            }
-            
-            function prevSlide() {
-                const newIndex = (currentSlide - 1 + slides.length) % slides.length;
-                updateSlider(newIndex);
-            }
-            
-            prevButton.addEventListener('click', prevSlide);
-            nextButton.addEventListener('click', nextSlide);
-            
-            indicators.forEach((indicator, index) => {
-                indicator.addEventListener('click', () => {
-                    if (currentSlide !== index) {
-                        updateSlider(index);
+            function handleDragMove(e) {
+                const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX;
+                const clientY = (e.type === 'mousemove') ? e.clientY : e.touches[0].clientY;
+                
+                // Check if we've moved enough to consider this a drag (not a click)
+                if (!isDragging) {
+                    const dx = Math.abs(clientX - startX);
+                    const dy = Math.abs(clientY - startY);
+                    
+                    // If movement exceeds 5px, consider it a drag
+                    if (dx > 5 || dy > 5) {
+                        isDragging = true;
+                    } else {
+                        return;
                     }
+                }
+                
+                // Calculate new position
+                const newX = clientX - offsetX;
+                const newY = clientY - offsetY;
+                
+                // Apply new position with boundary checks
+                const maxX = window.innerWidth - widget.offsetWidth;
+                const maxY = window.innerHeight - widget.offsetHeight;
+                
+                widget.style.left = Math.min(Math.max(0, newX), maxX) + 'px';
+                widget.style.top = Math.min(Math.max(0, newY), maxY) + 'px';
+                widget.style.right = 'auto';
+                widget.style.bottom = 'auto';
+            }
+            
+            function handleDragEnd(e) {
+                // Remove event listeners
+                document.removeEventListener('mousemove', handleDragMove);
+                document.removeEventListener('mouseup', handleDragEnd);
+                document.removeEventListener('touchmove', handleDragMove);
+                document.removeEventListener('touchend', handleDragEnd);
+                
+                // If this was a click (not a drag), treat it as a click
+                if (!isDragging) {
+                    const elapsedTime = Date.now() - startTime;
+                    if (elapsedTime < 300) { // 300ms threshold for click
+                        bubble.click();
+                    }
+                    return;
+                }
+                
+                // Save position to localStorage
+                const rect = widget.getBoundingClientRect();
+                localStorage.setItem('widgetX', rect.left);
+                localStorage.setItem('widgetY', rect.top);
+                
+                isDragging = false;
+            }
+            
+            // Load saved position
+            function loadPosition() {
+                const savedX = localStorage.getItem('widgetX');
+                const savedY = localStorage.getItem('widgetY');
+                
+                if (savedX && savedY) {
+                    widget.style.left = savedX + 'px';
+                    widget.style.top = savedY + 'px';
+                    widget.style.right = 'auto';
+                    widget.style.bottom = 'auto';
+                }
+            }
+            
+            // Accessibility functions
+            document.getElementById('increaseText').addEventListener('click', function() {
+                currentFontSize += 10;
+                if (currentFontSize > 150) currentFontSize = 150;
+                body.style.fontSize = currentFontSize + '%';
+                localStorage.setItem('fontSize', currentFontSize);
+            });
+            
+            document.getElementById('decreaseText').addEventListener('click', function() {
+                currentFontSize -= 10;
+                if (currentFontSize < 70) currentFontSize = 70;
+                body.style.fontSize = currentFontSize + '%';
+                localStorage.setItem('fontSize', currentFontSize);
+            });
+            
+            document.getElementById('highContrast').addEventListener('click', function() {
+                body.classList.toggle('high-contrast');
+                localStorage.setItem('highContrast', body.classList.contains('high-contrast'));
+            });
+            
+            document.getElementById('lightBackground').addEventListener('click', function() {
+                body.classList.toggle('light-background');
+                localStorage.setItem('lightBackground', body.classList.contains('light-background'));
+            });
+            
+            document.getElementById('linksUnderline').addEventListener('click', function() {
+                body.classList.toggle('links-underline');
+                localStorage.setItem('linksUnderline', body.classList.contains('links-underline'));
+            });
+            
+            document.getElementById('readableFont').addEventListener('click', function() {
+                body.classList.toggle('readable-font');
+                localStorage.setItem('readableFont', body.classList.contains('readable-font'));
+            });
+            
+            document.getElementById('textToSpeech').addEventListener('click', function() {
+                if (isSpeaking) {
+                    speechSynthesis.cancel();
+                    isSpeaking = false;
+                    return;
+                }
+                
+                const pageText = document.body.innerText;
+                speechUtterance = new SpeechSynthesisUtterance(pageText);
+                speechUtterance.lang = 'id-ID';
+                
+                speechUtterance.onend = function() {
+                    isSpeaking = false;
+                };
+                
+                speechSynthesis.speak(speechUtterance);
+                isSpeaking = true;
+            });
+            
+            document.getElementById('resetAccessibility').addEventListener('click', function() {
+                currentFontSize = 100;
+                body.style.fontSize = '';
+                body.classList.remove('high-contrast', 'light-background', 'links-underline', 'readable-font');
+                
+                ['fontSize', 'highContrast', 'lightBackground', 'linksUnderline', 'readableFont'].forEach(item => {
+                    localStorage.removeItem(item);
                 });
+                
+                if (isSpeaking) {
+                    speechSynthesis.cancel();
+                    isSpeaking = false;
+                }
             });
             
-            let autoplayInterval = setInterval(nextSlide, 5000);
+            function loadSettings() {
+                const savedFontSize = localStorage.getItem('fontSize');
+                if (savedFontSize) {
+                    currentFontSize = parseInt(savedFontSize);
+                    body.style.fontSize = currentFontSize + '%';
+                }
+                
+                if (localStorage.getItem('highContrast') === 'true') {
+                    body.classList.add('high-contrast');
+                }
+                
+                if (localStorage.getItem('lightBackground') === 'true') {
+                    body.classList.add('light-background');
+                }
+                
+                if (localStorage.getItem('linksUnderline') === 'true') {
+                    body.classList.add('links-underline');
+                }
+                
+                if (localStorage.getItem('readableFont') === 'true') {
+                    body.classList.add('readable-font');
+                }
+            }
             
-            const sliderContainer = document.querySelector('.slider-container');
-            sliderContainer.addEventListener('mouseenter', () => {
-                clearInterval(autoplayInterval);
+            // Handle window resize to keep widget within bounds
+            window.addEventListener('resize', function() {
+                const rect = widget.getBoundingClientRect();
+                const maxX = window.innerWidth - widget.offsetWidth;
+                const maxY = window.innerHeight - widget.offsetHeight;
+                
+                if (rect.left > maxX || rect.top > maxY) {
+                    widget.style.left = Math.min(rect.left, maxX) + 'px';
+                    widget.style.top = Math.min(rect.top, maxY) + 'px';
+                }
             });
             
-            sliderContainer.addEventListener('mouseleave', () => {
-                autoplayInterval = setInterval(nextSlide, 5000);
-            });
+            // Initialize
+            loadPosition();
+            loadSettings();
         });
     </script>
+
+<footer class="bg-blue text-blue-900">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+               <div class="flex items-center mb-6">
+                    <span class="w-15 h-15 flex items-center justify-center">
+        <img src="logo/pln.png" alt="Logo PLN" class="w-full h-full object-contain">
+    </span>
+    
+    <!-- Logo 2 -->
+    <span class="w-15 h-15 flex items-center justify-center ml-2">
+        <img src="logo/ICONNET.png" alt="Logo ICONNET" class="w-full h-full object-contain">
+    </span>
+               </div>
+                <p class="text-blue-900 mb-4">Kualitas dan kecepatan yang terus bertambah menjadi kebutuhan baik di rumah, kantor, dan banyak tempat lainnya membuat kami memberikan layanan terbaik untuk anda.</p>
+                <div class="flex space-x-4">
+                    <a href="#" class="w-8 h-8 flex items-center justify-center bg-blue-900 bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
+                        <i class="ri-facebook-fill"></i>
+                    </a>
+                    <a href="#" class="w-8 h-8 flex items-center justify-center bg-blue-900 bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
+                        <i class="ri-twitter-fill"></i>
+                    </a>
+                    <a href="#" class="w-8 h-8 flex items-center justify-center bg-blue-900 bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
+                        <i class="ri-instagram-fill"></i>
+                    </a>
+                    <a href="#" class="w-8 h-8 flex items-center justify-center bg-blue-900 bg-opacity-20 rounded hover:bg-opacity-30 transition-colors">
+                        <i class="ri-youtube-fill"></i>
+                    </a>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-4">Kontak</h3>
+                <div class="space-y-3 text-blue-900">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-5 h-5 flex items-center justify-center mt-0.5">
+                            <i class="ri-map-pin-line text-sm"></i>
+                        </div>
+                        <span class="text-sm">Jl. Demang Lebar Daun No.375, 20 Ilir D. IV, Kec. Ilir Tim. I, Kota Palembang, Sumatera Selatan 30131</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="w-5 h-5 flex items-center justify-center">
+                            <i class="ri-phone-line text-sm"></i>
+                        </div>
+                        <span class="text-sm">(0274) 588688</span>
+                    </div>
+                    <div class="flex items-center space-x-3">
+                        <div class="w-5 h-5 flex items-center justify-center">
+                            <i class="ri-mail-line text-sm"></i>
+                        </div>
+                        <span class="text-sm">info@PLN.ac.id</span>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-4">Tautan Cepat</h3>
+                <ul class="space-y-2 text-blue-900">
+                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Portal Akademik</a></li>
+                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">E-Learning</a></li>
+                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Perpustakaan Digital</a></li>
+                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Jurnal Elektronik</a></li>
+                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Sistem Informasi</a></li>
+                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Career Center</a></li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold mb-4">Newsletter</h3>
+                <p class="text-blue-900 text-sm mb-4">Dapatkan informasi terbaru dari PLN ICONNET langsung di email Anda</p>
+                <div class="flex">
+                    <input type="email" placeholder="Email Anda" class="flex-1 px-4 py-2 text-gray-900 rounded-l focus:outline-none focus:ring-2 focus:ring-blue-900">
+                    <button class="bg-blue-900 text-white px-4 py-2 rounded-r hover:bg-blue-800 transition-colors !rounded-button whitespace-nowrap">
+                        <div class="w-5 h-5 flex items-center justify-center">
+                            <i class="ri-send-plane-line"></i>
+                        </div>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-blue-600 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p class="text-blue-900 text-sm">© 2025 PLN ICONNET. All Right Reserved.</p>
+            <div class="flex space-x-6 mt-4 md:mt-0">
+                <a href="#" class="text-blue-900 text-sm hover:text-blue-700 transition-colors">Kebijakan Privasi</a>
+                <a href="#" class="text-blue-900 text-sm hover:text-blue-700 transition-colors">Syarat & Ketentuan</a>
+                <a href="#" class="text-blue-900 text-sm hover:text-blue-700 transition-colors">Sitemap</a>
+            </div>
+        </div>
+    </div>
+    <div class="footer-image">
+        <img src="uploads/Bgfooter3.png" alt="Footer Image">
+    </div>
+</footer>
+
+
+
+        <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.querySelector("#searchInput");
+            const searchResults = document.querySelector("#searchResults");
+
+            let timeout = null;
+
+            searchInput.addEventListener("input", function () {
+                clearTimeout(timeout);
+                const query = this.value.trim();
+
+                if (query.length < 2) {
+                    searchResults.innerHTML = "";
+                    searchResults.classList.add("hidden");
+                    return;
+                }
+
+                timeout = setTimeout(() => {
+                    fetch(`search.php?query=${encodeURIComponent(query)}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.length > 0) {
+                                let html = "";
+                                data.forEach(article => {
+                                    html += `
+                                        <a href="artikel.php?slug=${encodeURIComponent(article.slug)}"
+                                           class="block px-4 py-2 hover:bg-gray-100 border-b border-gray-200 last:border-b-0 no-underline text-gray-900 hover:text-primary">
+                                            <div class="font-medium text-gray-900">${article.title}</div>
+                                            <div class="text-xs text-gray-500">${article.category} • ${new Date(article.created_at).toLocaleDateString('id-ID')}</div>
+                                        </a>
+                                    `;
+                                });
+                                searchResults.innerHTML = html;
+                                searchResults.classList.remove("hidden");
+                            } else {
+                                searchResults.innerHTML = `<div class="px-4 py-2 text-gray-500">Tidak ada hasil</div>`;
+                                searchResults.classList.remove("hidden");
+                            }
+                        })
+                        .catch(err => console.error(err));
+                }, 300); // delay 300ms
+            });
+
+            // klik di luar -> sembunyikan popup
+            document.addEventListener("click", function (e) {
+                if (!searchResults.contains(e.target) && e.target !== searchInput) {
+                    searchResults.classList.add("hidden");
+                }
+            });
+        });
+
+        </script>
 
       <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -562,6 +1181,114 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
             }
         });
     </script>
-    <?php endif; ?>
+
+    <script>
+function getTld(hostname) {
+  const parts = hostname.split('.');
+  if (parts.length <= 2) return hostname;         
+  return parts.slice(parts.length - 2).join('.');   
+}
+
+function setGoogleTranslateCookie(src, target) {
+  const cookieVal = '/' + src + '/' + target;
+  document.cookie = 'googtrans=' + cookieVal + ';path=/';
+  try {
+    const domain = getTld(location.hostname);
+    document.cookie = 'googtrans=' + cookieVal + ';path=/;domain=' + domain;
+  } catch (e) {
+  }
+}
+
+(function preapplyLangFromStorage() {
+  const lang = localStorage.getItem('site_lang'); 
+  if (!lang) return;
+  const src = 'id'; 
+  const target = (lang === 'en') ? 'en' : 'id';
+  setGoogleTranslateCookie(src, target);
+})();
+
+function setLanguage(lang) {
+  if (!['id','en'].includes(lang)) lang = 'id';
+  localStorage.setItem('site_lang', lang);
+
+  const src = 'id'; 
+  const target = (lang === 'en') ? 'en' : 'id';
+
+  setGoogleTranslateCookie(src, target);
+
+  setTimeout(function() {
+    location.reload();
+  }, 150);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const btnId = document.getElementById('btn-id');
+  const btnEn = document.getElementById('btn-en');
+
+  if (btnId) btnId.addEventListener('click', ()=> setLanguage('id'));
+  if (btnEn) btnEn.addEventListener('click', ()=> setLanguage('en'));
+
+ 
+  const current = localStorage.getItem('site_lang') || 'id';
+  if (current === 'en' && btnEn) btnEn.classList.add('font-semibold');
+  if (current === 'id' && btnId) btnId.classList.add('font-semibold');
+});
+    </script>
+
+    <script type="text/javascript">
+    function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'id',              
+        includedLanguages: 'id,en',      
+        layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+        autoDisplay: false
+    }, 'google_translate_element');
+    }
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
+    <script>
+let lastScrollTop = 0;
+let btn = document.getElementById("scrollUpBtn");
+
+window.addEventListener("scroll", function() {
+    let st = window.pageYOffset || document.documentElement.scrollTop;
+    if (st > lastScrollTop) {
+        btn.classList.remove("show");
+    } else {
+        if (st > 200) {
+            btn.classList.add("show");
+        } else {
+            btn.classList.remove("show");
+        }
+    }
+    lastScrollTop = st <= 0 ? 0 : st;
+});
+
+btn.addEventListener("click", function() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Intersection Observer for scroll-triggered animations
+document.addEventListener('DOMContentLoaded', function() {
+    const observerOptions = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -50px 0px'
+    };
+
+    const observer = new IntersectionObserver(function(entries) {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('animate');
+            }
+        });
+    }, observerOptions);
+
+    // Observe all elements with animate-on-scroll class
+    const animateElements = document.querySelectorAll('.animate-on-scroll');
+    animateElements.forEach(element => {
+        observer.observe(element);
+    });
+});
+</script>
 </body>
 </html>

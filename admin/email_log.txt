@@ -1,0 +1,10 @@
+2025-12-07 02:54:29 - Email subject set: Artikel Baru: Test Article for Email
+2025-12-07 02:54:29 - Email body set
+2025-12-07 02:54:29 - Found 5 email addresses
+2025-12-07 02:54:29 - Added BCC: almanraffli1@gmail.com
+2025-12-07 02:54:29 - Added BCC: almanraffli1@gmail.com
+2025-12-07 02:54:29 - Added BCC: darren@gmail.com
+2025-12-07 02:54:29 - Added BCC: agung21@gmail.com
+2025-12-07 02:54:29 - Added BCC: nico@gmail.com
+2025-12-07 02:54:29 - Attempting to send email...
+2025-12-07 02:54:34 - Email sent successfully!
