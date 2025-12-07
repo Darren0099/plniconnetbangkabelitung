@@ -5,16 +5,15 @@ if (isset($_POST['submit'])) {
     $judul = $_POST['judul'];
     $isi   = $_POST['isi'];
 
-    // Upload gambar
+ 
     $namaFile = $_FILES['gambar']['name'];
     $tmpName  = $_FILES['gambar']['tmp_name'];
-    $folder   = "uploads/";
+    $folder   = "admin/uploads/articles/";
 
-    // Pindahkan file ke folder uploads/
     move_uploaded_file($tmpName, $folder . $namaFile);
 
-    // Simpan ke database
-    $sql = "INSERT INTO artikel (judul, isi, gambar) VALUES ('$judul', '$isi', '$namaFile')";
+    
+    $sql = "INSERT INTO artikel (judul, isi, gambar) VALUES ('$judul', '$isi', 'admin/uploads/articles/$namaFile')";
     $query = mysqli_query($koneksi, $sql);
 
     if ($query) {

@@ -8,23 +8,175 @@ if (!isset($_SESSION['user'])) {
 }
 
 $user = $_SESSION['user'];
-$current_page = basename($_SERVER['PHP_SELF']); 
+$current_page = basename($_SERVER['PHP_SELF']);
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard Admin - Sistem Manajemen Artikel</title>
+<title>Buat Artikel - Admin</title>
 <script src="https://cdn.tailwindcss.com/3.4.16"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css"> 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css">
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <style>
     .swal2-popup {
       font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* Sidebar Animation */
+    #sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    #sidebar:not(.hidden) {
+        transform: translateX(0);
+    }
+
+    /* Burger Menu Animation */
+    .burger-menu {
+        transition: transform 0.3s ease;
+    }
+
+    .burger-menu.active i {
+        transform: rotate(90deg);
+    }
+
+    /* Navigation Link Animations */
+    nav a {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    nav a:hover {
+        transform: translateX(4px);
+    }
+
+    nav a::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0;
+        background: rgba(99, 102, 241, 0.1);
+        transition: width 0.3s ease;
+        border-radius: 8px;
+    }
+
+    nav a:hover::before {
+        width: 100%;
+    }
+
+    /* Button Animations */
+    button {
+        transition: all 0.2s ease;
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+    }
+
+    button:active {
+        transform: translateY(0);
+    }
+
+    /* Form Input Animations */
+    input, select, textarea {
+        transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        transform: scale(1.01);
+    }
+
+    /* Card Animation */
+    .card {
+        animation: slideInUp 0.5s ease-out;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Page Load Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out forwards;
+        opacity: 0;
+    }
+
+    .animate-fade-in-left {
+        animation: fadeInLeft 0.6s ease-out forwards;
+        opacity: 0;
+    }
+
+    .animate-fade-in-right {
+        animation: fadeInRight 0.6s ease-out forwards;
+        opacity: 0;
+    }
+
+    /* Loading Animation */
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+
+    /* Pulse Animation for Notifications */
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
     }
   </style>
 <script>
@@ -59,8 +211,15 @@ tailwind.config = {
 </head>
 <body class="bg-gray-50">
 <div class="flex min-h-screen">
+  <!-- Burger Menu for Mobile -->
+  <div class="md:hidden fixed top-4 right-4 z-40">
+    <button onclick="toggleSidebar()" class="p-2 bg-white rounded-lg shadow-md border border-gray-200">
+      <i class="ri-menu-line text-gray-600"></i>
+    </button>
+  </div>
+
   <!-- Navigation Bar -->
-  <aside class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 z-30">
+  <aside id="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 z-30 hidden md:block">
     <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
       <div class="text-xl font-['Pacifico'] text-primary">logo</div>
       <span class="font-semibold text-gray-900">APLN</span>
@@ -72,13 +231,13 @@ tailwind.config = {
         </div>
         <span>Dashboard</span>
       </a>
-      <a href="artikel.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($current_page == 'artikel.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
+      <a href="tambahartikel.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($current_page == 'tambahartikel.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
         <div class="w-5 h-5 flex items-center justify-center">
           <i class="ri-article-line"></i>
         </div>
         <span>Buat Artikel</span>
       </a>
-      <a href="user-management.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($current_page == 'user-management.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
+      <a href="user.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($current_page == 'user.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
         <div class="w-5 h-5 flex items-center justify-center">
           <i class="ri-team-line"></i>
         </div>
@@ -102,11 +261,11 @@ tailwind.config = {
   </aside>
 
   <!-- Main Content -->
-  <div class="flex-1 ml-64">
+  <div class="flex-1 ml-0 md:ml-64">
     <!-- Header -->
     <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div class="flex items-center justify-between">
-       
+
         <div class="flex items-center gap-4">
           <button class="relative p-2 text-gray-600 hover:text-primary hover:bg-primary/5 rounded-md transition-colors">
             <div class="w-5 h-5 flex items-center justify-center">
@@ -120,7 +279,7 @@ tailwind.config = {
             </div>
             <div class="hidden md:block">
               <div class="text-sm font-medium text-gray-800"><?= htmlspecialchars($user['username']) ?></div>
-              <div class="text-xs text-gray-500"><a href="">admin</a></div>
+              <div class="text-xs text-gray-500">admin</div>
             </div>
           </div>
         </div>
@@ -143,9 +302,15 @@ tailwind.config = {
   <!-- Title Input -->
   <div class="mb-6">
     <label for="title" class="block text-sm font-medium text-gray-700 mb-2">Judul Artikel</label>
-    <input type="text" id="title" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Masukkan judul artikel" required maxlength="100">
+    <input type="text" id="title" name="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Masukkan judul artikel" required maxlength="100" oninput="generateSlug()">
+</div>
+
+<!-- Slug (akan diisi otomatis) -->
+<div class="mb-6">
+    <label for="slug" class="block text-sm font-medium text-gray-700 mb-2">Slug URL</label>
+    <input type="text" id="slug" name="slug" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-gray-50" placeholder="Slug akan dibuat otomatis" readonly>
   </div>
-  
+
   <!-- Category Selection -->
   <div class="mb-6">
     <label for="category" class="block text-sm font-medium text-gray-700 mb-2">Kategori</label>
@@ -163,7 +328,7 @@ tailwind.config = {
       </div>
     </div>
   </div>
-  
+
   <!-- Featured Image -->
   <div class="mb-6">
     <label class="block text-sm font-medium text-gray-700 mb-2">Gambar Utama</label>
@@ -182,7 +347,7 @@ tailwind.config = {
       </div>
     </div>
   </div>
-  
+
   <!-- Article Content -->
   <div class="mb-6">
     <label for="content" class="block text-sm font-medium text-gray-700 mb-2">Isi Artikel</label>
@@ -191,20 +356,20 @@ tailwind.config = {
       <span id="charCount" class="text-sm text-gray-500">0/5000 karakter</span>
     </div>
   </div>
-  
+
   <!-- Tags Input -->
   <div class="mb-6">
     <label for="tags" class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
     <input type="text" id="tags" name="tags" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Masukkan tags (pisahkan dengan koma)">
   </div>
-  
+
   <!-- Submit Buttons -->
 <div class="flex items-center justify-end space-x-4">
   <!-- Tombol Simpan Draft -->
   <button type="button" class="px-6 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors !rounded-button whitespace-nowrap">
     Simpan Draft
   </button>
-  
+
   <!-- Tombol Publikasikan -->
   <button type="submit" class="px-6 py-2 bg-primary text-white rounded-lg text-sm hover:bg-primary/90 transition-colors !rounded-button whitespace-nowrap">
     Publikasikan
@@ -216,6 +381,16 @@ tailwind.config = {
   </div>
 </div>
  <script>
+  function generateSlug() {
+    const title = document.getElementById('title').value;
+    // Simple slug generation (you can enhance this)
+    let slug = title.toLowerCase()
+                   .replace(/[^\w\s]/gi, '')
+                   .replace(/\s+/g, '-')
+                   .replace(/-+/g, '-')
+                   .trim();
+    document.getElementById('slug').value = slug;
+}
     document.addEventListener('DOMContentLoaded', function() {
   // Form elements
   const form = document.getElementById('articleForm');
@@ -264,7 +439,7 @@ tailwind.config = {
       });
       return;
     }
-    
+
     const reader = new FileReader();
     reader.onload = function(e) {
       imagePreview.src = e.target.result;
@@ -287,7 +462,7 @@ tailwind.config = {
   // Handle draft button click
   draftButton.addEventListener('click', function(e) {
     e.preventDefault(); // Mencegah form submit default
-    
+
     // Validasi minimal
     if (!form.querySelector('#title').value || !form.querySelector('#category').value) {
       Swal.fire({
@@ -297,7 +472,7 @@ tailwind.config = {
       });
       return;
     }
-    
+
     // Konfirmasi simpan draft
     Swal.fire({
       title: 'Simpan Draft?',
@@ -318,10 +493,10 @@ tailwind.config = {
   // Handle publish button click
   publishButton.addEventListener('click', function(e) {
     e.preventDefault(); // Mencegah form submit default
-    
+
     // Validasi lengkap
-    if (!form.querySelector('#title').value || 
-        !form.querySelector('#category').value || 
+    if (!form.querySelector('#title').value ||
+        !form.querySelector('#category').value ||
         !form.querySelector('#content').value) {
       Swal.fire({
         icon: 'error',
@@ -330,7 +505,7 @@ tailwind.config = {
       });
       return;
     }
-    
+
     submitForm('published', publishButton);
   });
 
@@ -338,13 +513,13 @@ tailwind.config = {
   function submitForm(status, buttonElement) {
     const formData = new FormData(form);
     formData.append('status', status);
-    
+
     const originalButtonText = buttonElement.innerHTML;
-    
+
     // Tampilkan loading state
     buttonElement.disabled = true;
     buttonElement.innerHTML = '<i class="ri-loader-4-line animate-spin"></i> Memproses...';
-    
+
     // Kirim data ke server
     fetch('save_article.php', {
       method: 'POST',
@@ -396,6 +571,70 @@ tailwind.config = {
   }
 });
  </script>
+<script>
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('hidden');
+}
 
+// Add page load animation
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate burger menu
+    const burgerMenu = document.querySelector('.md\\:hidden');
+    if (burgerMenu) {
+        burgerMenu.classList.add('animate-fade-in-right');
+        setTimeout(() => burgerMenu.style.animationDelay = '0s', 100);
+    }
+
+    // Animate sidebar
+    const sidebar = document.getElementById('sidebar');
+    if (sidebar) {
+        sidebar.classList.add('animate-fade-in-left');
+        setTimeout(() => sidebar.style.animationDelay = '0.2s', 100);
+    }
+
+    // Animate header
+    const header = document.querySelector('header');
+    if (header) {
+        header.classList.add('animate-fade-in-up');
+        setTimeout(() => header.style.animationDelay = '0.4s', 100);
+    }
+
+    // Animate main title
+    const mainTitle = document.querySelector('main h1');
+    if (mainTitle) {
+        mainTitle.classList.add('animate-fade-in-up');
+        setTimeout(() => mainTitle.style.animationDelay = '0.6s', 100);
+    }
+
+    // Animate main description
+    const mainDesc = document.querySelector('main p');
+    if (mainDesc) {
+        mainDesc.classList.add('animate-fade-in-up');
+        setTimeout(() => mainDesc.style.animationDelay = '0.8s', 100);
+    }
+
+    // Animate form container
+    const formContainer = document.querySelector('.bg-white.rounded-lg');
+    if (formContainer) {
+        formContainer.classList.add('animate-fade-in-up');
+        setTimeout(() => formContainer.style.animationDelay = '1.0s', 100);
+    }
+
+    // Animate form elements
+    const formElements = document.querySelectorAll('form > div');
+    formElements.forEach((element, index) => {
+        element.classList.add('animate-fade-in-up');
+        setTimeout(() => element.style.animationDelay = `${1.2 + index * 0.1}s`, 100);
+    });
+
+    // Animate buttons
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach((button, index) => {
+        button.classList.add('animate-fade-in-up');
+        setTimeout(() => button.style.animationDelay = `${1.6 + index * 0.1}s`, 100);
+    });
+});
+</script>
 </body>
 </html>
