@@ -247,9 +247,8 @@ tailwind.config = {
 <div class="flex min-h-screen">
 
   <aside id="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 z-30 hidden md:block">
-    <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
-      <div class="text-xl font-['Pacifico'] text-primary">logo</div>
-      <span class="font-semibold text-gray-900">APLN</span>
+    <div class="flex items-center px-6 py-4 border-b border-gray-200">
+      <img src="../logo/ICONNET.png" alt="Iconnet Logo" class="h-10 w-auto object-contain">
     </div>
     <nav class="p-4 space-y-2">
       <a href="dashboard.php" class="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
@@ -291,20 +290,6 @@ tailwind.config = {
   <div class="flex-1 ml-0 md:ml-64">
     <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-          <div class="text-sm text-gray-600">Dashboard / User Management</div>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="flex items-center space-x-3">
-            <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-              <i class="ri-user-line text-white text-sm"></i>
-            </div>
-            <div class="hidden md:block">
-              <div class="text-sm font-medium text-gray-800"><?php echo htmlspecialchars($_SESSION['user']['username']); ?></div>
-              <div class="text-xs text-gray-500">Admin</div>
-            </div>
-          </div>
-        </div>
       </div>
     </header>
 
