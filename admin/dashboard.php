@@ -1,7 +1,7 @@
-
-
 <?php
 session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 include 'koneksi.php';
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
@@ -61,6 +61,19 @@ $total_year = $articles_year_row['total'] ?? 0;
 $total_users_result = mysqli_query($conn, "SELECT COUNT(*) AS total FROM user");
 $total_users_row = mysqli_fetch_assoc($total_users_result);
 $total_users = $total_users_row['total'] ?? 0;
+
+// Query total articles per user (author_id) untuk Bar Chart
+$user_articles_query = "SELECT user.username, COUNT(articles.id) AS total FROM user INNER JOIN articles ON user.id = articles.author_id GROUP BY user.id, user.username ORDER BY total DESC";
+$user_articles_result = mysqli_query($conn, $user_articles_query);
+$user_names = [];
+$user_counts = [];
+
+if ($user_articles_result) {
+    while ($row = mysqli_fetch_assoc($user_articles_result)) {
+        $user_names[] = $row['username'];
+        $user_counts[] = intval($row['total']);
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -236,9 +249,8 @@ tailwind.config = {
 <div class="flex min-h-screen">
 
   <aside id="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 z-30 hidden md:block">
-    <div class="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
-      <div class="text-xl font-['Pacifico'] text-primary">logo</div>
-      <span class="font-semibold text-gray-900">APLN</span>
+    <div class="flex items-center px-6 py-4 border-b border-gray-200">
+      <img src="../logo/ICONNET.png" alt="Iconnet Logo" class="h-10 w-auto object-contain">
     </div>
     <nav class="p-4 space-y-2">
       <a href="#" class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 rounded-lg">
@@ -288,12 +300,6 @@ tailwind.config = {
             </form>
         </div>
         <div class="flex items-center gap-2 md:gap-4">
-          <button class="relative p-2 text-gray-600 hover:text-primary hover:bg-primary/5 rounded-md transition-colors">
-            <div class="w-5 h-5 flex items-center justify-center">
-              <i class="ri-notification-line text-lg"></i>
-            </div>
-            <span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">3</span>
-          </button>
           <div class="flex items-center space-x-2 md:space-x-3">
             <div class="w-8 h-8 md:w-10 md:h-10 bg-primary rounded-full flex items-center justify-center">
               <i class="ri-user-line text-white text-xs md:text-sm"></i>
@@ -562,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div id="barChart" style="height: 300px;"></div>
       </div>
 
-       
+        
     </main>
   </div>
 </div>
@@ -644,12 +650,9 @@ document.addEventListener('DOMContentLoaded', function() {
 document.addEventListener('DOMContentLoaded', function() {
   const barChart = echarts.init(document.getElementById('barChart'));
   
-  // Data dari PHP
-  const userData = [
-    ['Raffli']  ];
-  
-  const articleData = [
-    7  ];
+  // Data dinamis dari database PHP
+  const userData = <?php echo json_encode($user_names); ?>;
+  const articleData = <?php echo json_encode($user_counts); ?>;
   
   const barOption = {
     animation: false,
