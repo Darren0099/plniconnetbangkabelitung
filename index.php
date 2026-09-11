@@ -1,6 +1,9 @@
 <?php
 session_start();
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 include 'admin/koneksi.php';
+
 if (isset($_GET['lang'])) {
     $lang = $_GET['lang'] === 'en' ? 'en' : 'id'; // default ID
     $_SESSION['lang'] = $lang;
@@ -12,6 +15,7 @@ if (isset($_GET['lang'])) {
 if (!isset($_SESSION['lang'])) {
     $_SESSION['lang'] = 'id';
 }
+
 function isImage($filename) {
     $ext = pathinfo($filename, PATHINFO_EXTENSION);
     $imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
@@ -37,48 +41,15 @@ while ($row = mysqli_fetch_assoc($kategori_query)) {
 }
 ?>
 
-<!-- Pada bagian headline: -->
-<?php 
-$headline = mysqli_query($conn, "SELECT id, slug, title, featured_image, category, content, created_at FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT 1");
-if ($headline_data = mysqli_fetch_assoc($headline)) : 
-?>
-<a href="artikel.php?slug=<?= urlencode($headline_data['slug']) ?>" class="block group">
-    <!-- ... konten lainnya ... -->
-</a>
-<?php endif; ?>
-
-<!-- Pada bagian berita terbaru: -->
-<?php 
-$berita_terbaru = mysqli_query($conn, "SELECT id, slug, title, featured_image, category, content, created_at FROM articles WHERE status = 'published' AND id != {$headline_data['id']} ORDER BY created_at DESC LIMIT 3");
-while ($row = mysqli_fetch_assoc($berita_terbaru)) : 
-?>
-<a href="artikel.php?slug=<?= urlencode($row['slug']) ?>" class="block">
-    <!-- ... konten lainnya ... -->
-</a>
-<?php endwhile; ?>
-
-<!-- Pada bagian kategori: -->
-<?php 
-$kategori_query = mysqli_query($conn, "SELECT DISTINCT category FROM articles WHERE status = 'published' ORDER BY category ASC LIMIT 3");
-while ($kategori = mysqli_fetch_assoc($kategori_query)) :
-    $category = $kategori['category'];
-    $artikel_kategori = mysqli_query($conn, "SELECT id, slug, title, featured_image, created_at FROM articles WHERE status = 'published' AND category = '$category' ORDER BY created_at DESC LIMIT 3");
-    while ($row = mysqli_fetch_assoc($artikel_kategori)): 
-?>
-<a href="artikel.php?slug=<?= urlencode($row['slug']) ?>" class="no-underline">
-    <!-- ... konten lainnya ... -->
-</a>
-<?php endwhile; endwhile; ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PLN ICONNET</title>
+    <title>APLN ICONNET</title>
     <script src="https://cdn.tailwindcss.com/3.4.16"></script>
     
-    <link rel="icon" href="/logo/plnv2.png" type="image/png">
+    <link rel="icon" href="/logo/ic.png" type="image/png">
     <script>
         tailwind.config = {
             theme: {
@@ -113,7 +84,7 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :where([class^="ri-"])::before { content: "\f3c2"; }
-           .welcome-notification {
+        .welcome-notification {
             position: fixed;
             top: 20px;
             right: 20px;
@@ -129,12 +100,11 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
             animation: slideIn 0.5s ease-out, fadeOut 0.5s ease-in 3s forwards;
         }
         
-.footer-image img {
-  width: 100%;          /* Penuhi lebar layar */
-  height: auto;         /* Jaga rasio gambar */
-  display: block;       /* Hilangkan spasi kosong bawah */
-}
-
+        .footer-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
 
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
@@ -177,224 +147,216 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
         <span>Selamat datang, <?= htmlspecialchars($username) ?>!</span>
     </div>
     <?php endif; ?>
+
     <style>
-     
-  body, html {
-    margin: 0; padding: 0; box-sizing: border-box;
-    overflow-x: hidden;
-  }
-  header {
-    background: white;
-    border-bottom: 1px solid #e5e7eb;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-    width: 100%;
-  }
-
-  #scrollUpBtn {
-    position: fixed;
-    bottom: -70px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    background-color: #FFC107;
-    border: none;
-    border-radius: 50%;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.4s ease;
-    z-index: 9999;
-}
-#scrollUpBtn svg {
-    width: 60%;
-    height: 60%;
-}
-#scrollUpBtn.show {
-    bottom: 20px;
-    opacity: 1;
-}
-@media (max-width: 480px) {
-    #scrollUpBtn {
-        width: 46px;
-        height: 46px;
+    body, html {
+        margin: 0; padding: 0; box-sizing: border-box;
+        overflow-x: hidden;
     }
-}
-  .container {
-    max-width: 1024px;
-    margin: 0 auto;
-    padding: 0 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 56px;
-  }
-  .logo img {
-    height: 36px;
-    width: auto;
-  }
-  /* Search box */
-  .search-wrapper {
-    flex: 1 1 200px;
-    max-width: 400px;
-    margin: 0 1rem;
-    position: relative;
-  }
-  .search-wrapper input {
-    width: 100%;
-    padding: 6px 10px 6px 32px;
-    border: 1px solid #ccc;
-    border-radius: 9999px;
-    font-size: 14px;
-  }
-  .search-wrapper i {
-    position: absolute;
-    top: 50%;
-    left: 10px;
-    transform: translateY(-50%);
-    color: #9ca3af;
-    font-size: 16px;
-  }
+    header {
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        width: 100%;
+    }
 
-  /* Language & Burger container */
-  .right-controls {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-  }
-
-  .lang-buttons button {
-    background: none;
-    border: none;
-    padding: 4px 8px;
-    cursor: pointer;
-    font-weight: 600;
-    font-size: 14px;
-  }
-  .lang-buttons span {
-    color: #9ca3af;
-  }
-
-  /* Burger menu button */
-  #burger-btn {
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 24px;
-    /* display: none; */ /* Make burger button visible on all screen sizes */
-  }
-
-  #mobile-menu .username {
-    color: #005baa;
-    font-weight: 600;
-    display: inline-block;
-    margin-right: 8px;
-}
-
-#mobile-menu .login-btn {
-    display: block;
-    background-color: #005baa;
-    color: white;
-    padding: 8px 15px;
-    border-radius: 20px;
-    text-align: center;
-    margin-top: 10px;
-}
-
-#mobile-menu .logout-btn {
-    display: block;
-    background-color: #f1f1f1;
-    color: #333;
-    padding: 8px 15px;
-    border-radius: 20px;
-    text-align: center;
-    margin-top: 5px;
-}
-
-#mobile-menu .user-menu-item {
-    color: #005baa;
-    font-weight: 600;
-    border-bottom: none !important;
-    padding-top: 15px !important;
-}
-  #mobile-menu {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    width: 280px;
-    background: white;
-    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
-    z-index: 1200;
-    padding: 1rem;
-    flex-direction: column;
-  }
-  #mobile-menu.open, #mobile-menu.mobile-menu-open {
-    display: flex;
-    transform: translateX(0);
-  }
-  /* Slide main content when menu open */
-  .content-shifted {
-    transform: translateX(280px);
-    transition: transform 0.3s ease;
-  }
-  #mobile-menu a {
-    display: block;
-    padding: 0.75rem 0;
-    color: #374151;
-    text-decoration: none;
-    border-bottom: 1px solid #e5e7eb;
-  }
-  #mobile-menu a:hover {
-    color: #2563eb;
-  }
-
-  /* Responsive */
-  @media (max-width: 768px) {
+    #scrollUpBtn {
+        position: fixed;
+        bottom: -70px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        background-color: #FFC107;
+        border: none;
+        border-radius: 50%;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: all 0.4s ease;
+        z-index: 9999;
+    }
+    #scrollUpBtn svg {
+        width: 60%;
+        height: 60%;
+    }
+    #scrollUpBtn.show {
+        bottom: 20px;
+        opacity: 1;
+    }
+    @media (max-width: 480px) {
+        #scrollUpBtn {
+            width: 46px;
+            height: 46px;
+        }
+    }
     .container {
-      height: 48px;
-      padding: 0 0.5rem;
+        max-width: 1024px;
+        margin: 0 auto;
+        padding: 0 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        height: 56px;
+    }
+    .logo img {
+        height: 36px;
+        width: auto;
     }
     .search-wrapper {
-      flex: 1 1 auto;
-      max-width: none;
-      margin: 0 0.5rem 0 0.5rem;
+        flex: 1 1 200px;
+        max-width: 400px;
+        margin: 0 1rem;
+        position: relative;
     }
-    .lang-buttons {
-      display: none; /* Sembunyikan tombol bahasa di mobile jika sempit */
+    .search-wrapper input {
+        width: 100%;
+        padding: 6px 10px 6px 32px;
+        border: 1px solid #ccc;
+        border-radius: 9999px;
+        font-size: 14px;
     }
-  }
- 
- 
+    .search-wrapper i {
+        position: absolute;
+        top: 50%;
+        left: 10px;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        font-size: 16px;
+    }
+
+    .right-controls {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .lang-buttons button {
+        background: none;
+        border: none;
+        padding: 4px 8px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 14px;
+    }
+    .lang-buttons span {
+        color: #9ca3af;
+    }
+
+    #burger-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 24px;
+    }
+
+    #mobile-menu .username {
+        color: #005baa;
+        font-weight: 600;
+        display: inline-block;
+        margin-right: 8px;
+    }
+
+    #mobile-menu .login-btn {
+        display: block;
+        background-color: #005baa;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        text-align: center;
+        margin-top: 10px;
+    }
+
+    #mobile-menu .logout-btn {
+        display: block;
+        background-color: #f1f1f1;
+        color: #333;
+        padding: 8px 15px;
+        border-radius: 20px;
+        text-align: center;
+        margin-top: 5px;
+    }
+
+    #mobile-menu .user-menu-item {
+        color: #005baa;
+        font-weight: 600;
+        border-bottom: none !important;
+        padding-top: 15px !important;
+    }
+    #mobile-menu {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        width: 280px;
+        background: white;
+        box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        z-index: 1200;
+        padding: 1rem;
+        flex-direction: column;
+    }
+    #mobile-menu.open, #mobile-menu.mobile-menu-open {
+        display: flex;
+        transform: translateX(0);
+    }
+    .content-shifted {
+        transform: translateX(280px);
+        transition: transform 0.3s ease;
+    }
+    #mobile-menu a {
+        display: block;
+        padding: 0.75rem 0;
+        color: #374151;
+        text-decoration: none;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    #mobile-menu a:hover {
+        color: #2563eb;
+    }
+
+    @media (max-width: 768px) {
+        .container {
+            height: 48px;
+            padding: 0 0.5rem;
+        }
+        .search-wrapper {
+            flex: 1 1 auto;
+            max-width: none;
+            margin: 0 0.5rem 0 0.5rem;
+        }
+        .lang-buttons {
+            display: none;
+        }
+    }
     </style>
+
 <header>
   <div class="container">
     <div class="logo">
-      <a href="#">
+      <a href="index.php">
         <img src="logo/ICONNET.png" alt="PLN ICONNET Logo" />
       </a>
     </div>
     <button id="scrollUpBtn">
-    <svg xmlns="http://www.w3.org/2000/svg" fill="#454545" viewBox="0 0 256 256">
-        <path d="M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z"></path>
-    </svg>
-</button>
-     <div class="relative flex-grow max-w-xs">
-                    <input id="searchInput" type="text" placeholder="Cari artikel..."
-                        class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full">
-                    <div class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 flex items-center justify-center">
-                        <i class="ri-search-line text-gray-400 text-sm"></i>
-                    </div>
-                    <!-- Popup hasil pencarian -->
-                    <div id="searchResults" class="absolute top-full left-0 w-full bg-white shadow-lg rounded-md mt-1 hidden z-50">
-                        <!-- hasil pencarian muncul di sini -->
-                    </div>
-     </div>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="#454545" viewBox="0 0 256 256">
+            <path d="M205.66,117.66a8,8,0,0,1-11.32,0L136,59.31V216a8,8,0,0,1-16,0V59.31L61.66,117.66a8,8,0,0,1-11.32-11.32l72-72a8,8,0,0,1,11.32,0l72,72A8,8,0,0,1,205.66,117.66Z"></path>
+        </svg>
+    </button>
+    <div class="relative flex-grow max-w-xs">
+        <input id="searchInput" type="text" placeholder="Cari artikel..."
+            class="pl-10 pr-4 py-2 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent w-full">
+        <div class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 flex items-center justify-center">
+            <i class="ri-search-line text-gray-400 text-sm"></i>
+        </div>
+        <div id="searchResults" class="absolute top-full left-0 w-full bg-white shadow-lg rounded-md mt-1 hidden z-50">
+            <!-- Hasil Pencarian -->
+        </div>
+    </div>
 
     <div class="right-controls">
       <div class="lang-buttons">
@@ -404,22 +366,22 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
       </div>
 
       <div class="user-section hidden sm:flex items-center">
-                    <?php if (isset($_SESSION['user'])): ?>
-                        <span class="username text-sm mr-3"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
-                        <a href="admin/logout.php" class="logout-btn bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition">Logout</a>
-                    <?php else: ?>
-                        <a href="admin/index.php" class="login-btn bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded-full text-sm transition">Login</a>
-                    <?php endif; ?>
-        </div>
+            <?php if (isset($_SESSION['user'])): ?>
+                <span class="username text-sm mr-3"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
+                <a href="admin/logout.php" class="logout-btn bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition">Logout</a>
+            <?php else: ?>
+                <a href="admin/index.php" class="login-btn bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded-full text-sm transition">Login</a>
+            <?php endif; ?>
+      </div>
 
-            <button id="burger-btn" aria-label="Toggle Menu" style="margin-right: 10px;">
-                <i class="ri-menu-line"></i>
-            </button>
+      <button id="burger-btn" aria-label="Toggle Menu" style="margin-right: 10px;">
+          <i class="ri-menu-line"></i>
+      </button>
     </div>
   </div>
 
-    <nav id="mobile-menu">
-      <button id="mobile-menu-close-btn" aria-label="Close Menu" class="mb-4 self-end text-gray-600 hover:text-gray-900 text-2xl font-bold">&times;</button>
+  <nav id="mobile-menu">
+    <button id="mobile-menu-close-btn" aria-label="Close Menu" class="mb-4 self-end text-gray-600 hover:text-gray-900 text-2xl font-bold">&times;</button>
     <a href="index.php">Beranda</a>
     <a href="#">Tentang ICONNET</a>
     <a href="#">Sejarah</a>
@@ -433,13 +395,12 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
     <?php else: ?>
         <a href="admin/index.php" class="login-btn">Login</a>
     <?php endif; ?>
-</nav>
+  </nav>
 </header>
 
 <script>
   const burgerBtn = document.getElementById('burger-btn');
   const mobileMenu = document.getElementById('mobile-menu');
-  // Change mainContent selector to the container div inside header for better layout control
   const mainContent = document.querySelector('header .container');
 
   burgerBtn.addEventListener('click', () => {
@@ -459,15 +420,12 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
     });
   }
 
-  // Add smooth transition for mainContent shifting
   if (mainContent) {
     mainContent.style.transition = 'transform 0.4s ease';
   }
 </script>
 
-
-
-      <section class="relative h-[600px] overflow-hidden animate-on-scroll">
+<section class="relative h-[600px] overflow-hidden animate-on-scroll">
     <div class="slider-container relative h-full">
         <?php foreach ($slider_data as $index => $slide): ?>
         <div class="slide absolute inset-0 <?= $index === 0 ? 'opacity-100 z-10' : 'opacity-0 z-0' ?> transition-opacity duration-500 ease-in-out" 
@@ -485,7 +443,6 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
         <?php endforeach; ?>
     </div>
 
-  
     <button class="absolute left-4 top-1/2 transform -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-white bg-opacity-30 hover:bg-opacity-50 rounded-full text-white transition-all z-20" id="prevSlide">
         <i class="ri-arrow-left-s-line text-2xl"></i>
     </button>
@@ -493,7 +450,6 @@ while ($kategori = mysqli_fetch_assoc($kategori_query)) :
         <i class="ri-arrow-right-s-line text-2xl"></i>
     </button>
 
-  
     <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 z-20">
         <?php foreach ($slider_data as $index => $slide): ?>
         <button class="w-3 h-3 rounded-full cursor-pointer focus:outline-none <?= $index === 0 ? 'bg-white' : 'bg-white bg-opacity-50' ?> dot-indicator" data-slide="<?= $index ?>"></button>
@@ -510,14 +466,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSlide = 0;
     let slideInterval;
 
-  
     function initSlider() {
         if (slides.length === 0) return;
         
-   
         startSlideInterval();
         
-       
         prevBtn.addEventListener('click', prevSlide);
         nextBtn.addEventListener('click', nextSlide);
         
@@ -527,13 +480,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
         
-       
         const sliderContainer = document.querySelector('.slider-container');
         sliderContainer.addEventListener('mouseenter', pauseSlide);
         sliderContainer.addEventListener('mouseleave', startSlideInterval);
     }
 
-  
     function showSlide(index) {
         slides.forEach((slide, i) => {
             slide.classList.toggle('opacity-100', i === index);
@@ -587,7 +538,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <section class="py-16 bg-white animate-on-scroll">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <!-- Berita Utama (Headline) - Gambar di Kiri, Teks di Kanan -->
+        <!-- Headline -->
         <?php 
         $headline = mysqli_query($conn, "SELECT * FROM articles WHERE status = 'published' ORDER BY created_at DESC LIMIT 1");
         if ($headline_data = mysqli_fetch_assoc($headline)) : 
@@ -731,310 +682,290 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </section>
-  <div class="accessibility-widget" id="accessibilityWidget">
-        <div class="accessibility-menu" id="accessibilityMenu">
-            <div class="accessibility-option" id="increaseText">
-                <i class="bi bi-zoom-in"></i>
-                <span>Increase Text</span>
-            </div>
-            <div class="accessibility-option" id="decreaseText">
-                <i class="bi bi-zoom-out"></i>
-                <span>Decrease Text</span>
-            </div>
-            <div class="accessibility-option" id="highContrast">
-                <i class="bi bi-contrast"></i>
-                <span>High Contrast</span>
-            </div>
-            <div class="accessibility-option" id="lightBackground">
-                <i class="bi bi-brightness-high"></i>
-                <span>Light Background</span>
-            </div>
-            <div class="accessibility-option" id="linksUnderline">
-                <i class="bi bi-link-45deg"></i>
-                <span>Links Underline</span>
-            </div>
-            <div class="accessibility-option" id="readableFont">
-                <i class="bi bi-fonts"></i>
-                <span>Readable Font</span>
-            </div>
-            <div class="accessibility-option" id="textToSpeech">
-                <i class="bi bi-soundwave"></i>
-                <span>Text to Speech</span>
-            </div>
-            <div class="accessibility-option" id="resetAccessibility">
-                <i class="bi bi-arrow-counterclockwise"></i>
-                <span>Reset</span>
-            </div>
+
+<!-- Widget Aksesibilitas -->
+<div class="accessibility-widget" id="accessibilityWidget">
+    <div class="accessibility-menu" id="accessibilityMenu">
+        <div class="accessibility-option" id="increaseText">
+            <i class="bi bi-zoom-in"></i>
+            <span>Increase Text</span>
         </div>
-        <div class="accessibility-bubble" id="accessibilityBubble">
-            <i class="bi bi-universal-access"></i>
+        <div class="accessibility-option" id="decreaseText">
+            <i class="bi bi-zoom-out"></i>
+            <span>Decrease Text</span>
+        </div>
+        <div class="accessibility-option" id="highContrast">
+            <i class="bi bi-contrast"></i>
+            <span>High Contrast</span>
+        </div>
+        <div class="accessibility-option" id="lightBackground">
+            <i class="bi bi-brightness-high"></i>
+            <span>Light Background</span>
+        </div>
+        <div class="accessibility-option" id="linksUnderline">
+            <i class="bi bi-link-45deg"></i>
+            <span>Links Underline</span>
+        </div>
+        <div class="accessibility-option" id="readableFont">
+            <i class="bi bi-fonts"></i>
+            <span>Readable Font</span>
+        </div>
+        <div class="accessibility-option" id="textToSpeech">
+            <i class="bi bi-soundwave"></i>
+            <span>Text to Speech</span>
+        </div>
+        <div class="accessibility-option" id="resetAccessibility">
+            <i class="bi bi-arrow-counterclockwise"></i>
+            <span>Reset</span>
         </div>
     </div>
+    <div class="accessibility-bubble" id="accessibilityBubble">
+        <i class="bi bi-universal-access"></i>
+    </div>
+</div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const widget = document.getElementById('accessibilityWidget');
-            const bubble = document.getElementById('accessibilityBubble');
-            const menu = document.getElementById('accessibilityMenu');
-            const body = document.body;
-            let currentFontSize = 100;
-            let speechSynthesis = window.speechSynthesis;
-            let isSpeaking = false;
-            let speechUtterance = null;
-            let isDragging = false;
-            let offsetX, offsetY;
-            let startX, startY;
-            let startTime;
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const widget = document.getElementById('accessibilityWidget');
+    const bubble = document.getElementById('accessibilityBubble');
+    const menu = document.getElementById('accessibilityMenu');
+    const body = document.body;
+    let currentFontSize = 100;
+    let speechSynthesis = window.speechSynthesis;
+    let isSpeaking = false;
+    let speechUtterance = null;
+    let isDragging = false;
+    let offsetX, offsetY;
+    let startX, startY;
+    let startTime;
+    
+    bubble.addEventListener('click', function(e) {
+        if (isDragging) return;
+        e.stopPropagation();
+        menu.classList.toggle('show');
+    });
+    
+    document.addEventListener('click', function() {
+        menu.classList.remove('show');
+    });
+    
+    menu.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    bubble.addEventListener('mousedown', startDrag);
+    
+    bubble.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 1) {
+            startDrag(e);
+        }
+    }, { passive: false });
+    
+    function startDrag(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX;
+        startY = (e.type === 'mousedown') ? e.clientY : e.touches[0].clientY;
+        startTime = Date.now();
+        
+        isDragging = false;
+        
+        const rect = widget.getBoundingClientRect();
+        offsetX = ((e.type === 'mousedown') ? e.clientX : e.touches[0].clientX) - rect.left;
+        offsetY = ((e.type === 'mousedown') ? e.clientY : e.touches[0].clientY) - rect.top;
+        
+        if (e.type === 'mousedown') {
+            document.addEventListener('mousemove', handleDragMove);
+            document.addEventListener('mouseup', handleDragEnd);
+        } else {
+            document.addEventListener('touchmove', handleDragMove, { passive: false });
+            document.addEventListener('touchend', handleDragEnd);
+        }
+        
+        menu.classList.remove('show');
+    }
+    
+    function handleDragMove(e) {
+        const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX;
+        const clientY = (e.type === 'mousemove') ? e.clientY : e.touches[0].clientY;
+        
+        if (!isDragging) {
+            const dx = Math.abs(clientX - startX);
+            const dy = Math.abs(clientY - startY);
             
-            // Toggle menu visibility
-            bubble.addEventListener('click', function(e) {
-                if (isDragging) return;
-                e.stopPropagation();
-                menu.classList.toggle('show');
-            });
-            
-            // Close menu when clicking outside
-            document.addEventListener('click', function() {
-                menu.classList.remove('show');
-            });
-            
-            // Prevent menu from closing when clicking inside
-            menu.addEventListener('click', function(e) {
-                e.stopPropagation();
-            });
-            
-            // Drag functionality for mouse
-            bubble.addEventListener('mousedown', startDrag);
-            
-            // Drag functionality for touch
-            bubble.addEventListener('touchstart', function(e) {
-                // Prevent double-tap zoom
-                if (e.touches.length === 1) {
-                    startDrag(e);
-                }
-            }, { passive: false });
-            
-            function startDrag(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Record start position and time for click detection
-                startX = (e.type === 'mousedown') ? e.clientX : e.touches[0].clientX;
-                startY = (e.type === 'mousedown') ? e.clientY : e.touches[0].clientY;
-                startTime = Date.now();
-                
-                isDragging = false; // Will be set to true after movement threshold
-                
-                // Get initial position
-                const rect = widget.getBoundingClientRect();
-                offsetX = ((e.type === 'mousedown') ? e.clientX : e.touches[0].clientX) - rect.left;
-                offsetY = ((e.type === 'mousedown') ? e.clientY : e.touches[0].clientY) - rect.top;
-                
-                // Add event listeners based on input type
-                if (e.type === 'mousedown') {
-                    document.addEventListener('mousemove', handleDragMove);
-                    document.addEventListener('mouseup', handleDragEnd);
-                } else {
-                    document.addEventListener('touchmove', handleDragMove, { passive: false });
-                    document.addEventListener('touchend', handleDragEnd);
-                }
-                
-                // Hide menu during potential drag
-                menu.classList.remove('show');
+            if (dx > 5 || dy > 5) {
+                isDragging = true;
+            } else {
+                return;
             }
-            
-            function handleDragMove(e) {
-                const clientX = (e.type === 'mousemove') ? e.clientX : e.touches[0].clientX;
-                const clientY = (e.type === 'mousemove') ? e.clientY : e.touches[0].clientY;
-                
-                // Check if we've moved enough to consider this a drag (not a click)
-                if (!isDragging) {
-                    const dx = Math.abs(clientX - startX);
-                    const dy = Math.abs(clientY - startY);
-                    
-                    // If movement exceeds 5px, consider it a drag
-                    if (dx > 5 || dy > 5) {
-                        isDragging = true;
-                    } else {
-                        return;
-                    }
-                }
-                
-                // Calculate new position
-                const newX = clientX - offsetX;
-                const newY = clientY - offsetY;
-                
-                // Apply new position with boundary checks
-                const maxX = window.innerWidth - widget.offsetWidth;
-                const maxY = window.innerHeight - widget.offsetHeight;
-                
-                widget.style.left = Math.min(Math.max(0, newX), maxX) + 'px';
-                widget.style.top = Math.min(Math.max(0, newY), maxY) + 'px';
-                widget.style.right = 'auto';
-                widget.style.bottom = 'auto';
+        }
+        
+        const newX = clientX - offsetX;
+        const newY = clientY - offsetY;
+        
+        const maxX = window.innerWidth - widget.offsetWidth;
+        const maxY = window.innerHeight - widget.offsetHeight;
+        
+        widget.style.left = Math.min(Math.max(0, newX), maxX) + 'px';
+        widget.style.top = Math.min(Math.max(0, newY), maxY) + 'px';
+        widget.style.right = 'auto';
+        widget.style.bottom = 'auto';
+    }
+    
+    function handleDragEnd(e) {
+        document.removeEventListener('mousemove', handleDragMove);
+        document.removeEventListener('mouseup', handleDragEnd);
+        document.removeEventListener('touchmove', handleDragMove);
+        document.removeEventListener('touchend', handleDragEnd);
+        
+        if (!isDragging) {
+            const elapsedTime = Date.now() - startTime;
+            if (elapsedTime < 300) {
+                bubble.click();
             }
-            
-            function handleDragEnd(e) {
-                // Remove event listeners
-                document.removeEventListener('mousemove', handleDragMove);
-                document.removeEventListener('mouseup', handleDragEnd);
-                document.removeEventListener('touchmove', handleDragMove);
-                document.removeEventListener('touchend', handleDragEnd);
-                
-                // If this was a click (not a drag), treat it as a click
-                if (!isDragging) {
-                    const elapsedTime = Date.now() - startTime;
-                    if (elapsedTime < 300) { // 300ms threshold for click
-                        bubble.click();
-                    }
-                    return;
-                }
-                
-                // Save position to localStorage
-                const rect = widget.getBoundingClientRect();
-                localStorage.setItem('widgetX', rect.left);
-                localStorage.setItem('widgetY', rect.top);
-                
-                isDragging = false;
-            }
-            
-            // Load saved position
-            function loadPosition() {
-                const savedX = localStorage.getItem('widgetX');
-                const savedY = localStorage.getItem('widgetY');
-                
-                if (savedX && savedY) {
-                    widget.style.left = savedX + 'px';
-                    widget.style.top = savedY + 'px';
-                    widget.style.right = 'auto';
-                    widget.style.bottom = 'auto';
-                }
-            }
-            
-            // Accessibility functions
-            document.getElementById('increaseText').addEventListener('click', function() {
-                currentFontSize += 10;
-                if (currentFontSize > 150) currentFontSize = 150;
-                body.style.fontSize = currentFontSize + '%';
-                localStorage.setItem('fontSize', currentFontSize);
-            });
-            
-            document.getElementById('decreaseText').addEventListener('click', function() {
-                currentFontSize -= 10;
-                if (currentFontSize < 70) currentFontSize = 70;
-                body.style.fontSize = currentFontSize + '%';
-                localStorage.setItem('fontSize', currentFontSize);
-            });
-            
-            document.getElementById('highContrast').addEventListener('click', function() {
-                body.classList.toggle('high-contrast');
-                localStorage.setItem('highContrast', body.classList.contains('high-contrast'));
-            });
-            
-            document.getElementById('lightBackground').addEventListener('click', function() {
-                body.classList.toggle('light-background');
-                localStorage.setItem('lightBackground', body.classList.contains('light-background'));
-            });
-            
-            document.getElementById('linksUnderline').addEventListener('click', function() {
-                body.classList.toggle('links-underline');
-                localStorage.setItem('linksUnderline', body.classList.contains('links-underline'));
-            });
-            
-            document.getElementById('readableFont').addEventListener('click', function() {
-                body.classList.toggle('readable-font');
-                localStorage.setItem('readableFont', body.classList.contains('readable-font'));
-            });
-            
-            document.getElementById('textToSpeech').addEventListener('click', function() {
-                if (isSpeaking) {
-                    speechSynthesis.cancel();
-                    isSpeaking = false;
-                    return;
-                }
-                
-                const pageText = document.body.innerText;
-                speechUtterance = new SpeechSynthesisUtterance(pageText);
-                speechUtterance.lang = 'id-ID';
-                
-                speechUtterance.onend = function() {
-                    isSpeaking = false;
-                };
-                
-                speechSynthesis.speak(speechUtterance);
-                isSpeaking = true;
-            });
-            
-            document.getElementById('resetAccessibility').addEventListener('click', function() {
-                currentFontSize = 100;
-                body.style.fontSize = '';
-                body.classList.remove('high-contrast', 'light-background', 'links-underline', 'readable-font');
-                
-                ['fontSize', 'highContrast', 'lightBackground', 'linksUnderline', 'readableFont'].forEach(item => {
-                    localStorage.removeItem(item);
-                });
-                
-                if (isSpeaking) {
-                    speechSynthesis.cancel();
-                    isSpeaking = false;
-                }
-            });
-            
-            function loadSettings() {
-                const savedFontSize = localStorage.getItem('fontSize');
-                if (savedFontSize) {
-                    currentFontSize = parseInt(savedFontSize);
-                    body.style.fontSize = currentFontSize + '%';
-                }
-                
-                if (localStorage.getItem('highContrast') === 'true') {
-                    body.classList.add('high-contrast');
-                }
-                
-                if (localStorage.getItem('lightBackground') === 'true') {
-                    body.classList.add('light-background');
-                }
-                
-                if (localStorage.getItem('linksUnderline') === 'true') {
-                    body.classList.add('links-underline');
-                }
-                
-                if (localStorage.getItem('readableFont') === 'true') {
-                    body.classList.add('readable-font');
-                }
-            }
-            
-            // Handle window resize to keep widget within bounds
-            window.addEventListener('resize', function() {
-                const rect = widget.getBoundingClientRect();
-                const maxX = window.innerWidth - widget.offsetWidth;
-                const maxY = window.innerHeight - widget.offsetHeight;
-                
-                if (rect.left > maxX || rect.top > maxY) {
-                    widget.style.left = Math.min(rect.left, maxX) + 'px';
-                    widget.style.top = Math.min(rect.top, maxY) + 'px';
-                }
-            });
-            
-            // Initialize
-            loadPosition();
-            loadSettings();
+            return;
+        }
+        
+        const rect = widget.getBoundingClientRect();
+        localStorage.setItem('widgetX', rect.left);
+        localStorage.setItem('widgetY', rect.top);
+        
+        isDragging = false;
+    }
+    
+    function loadPosition() {
+        const savedX = localStorage.getItem('widgetX');
+        const savedY = localStorage.getItem('widgetY');
+        
+        if (savedX && savedY) {
+            widget.style.left = savedX + 'px';
+            widget.style.top = savedY + 'px';
+            widget.style.right = 'auto';
+            widget.style.bottom = 'auto';
+        }
+    }
+    
+    document.getElementById('increaseText').addEventListener('click', function() {
+        currentFontSize += 10;
+        if (currentFontSize > 150) currentFontSize = 150;
+        body.style.fontSize = currentFontSize + '%';
+        localStorage.setItem('fontSize', currentFontSize);
+    });
+    
+    document.getElementById('decreaseText').addEventListener('click', function() {
+        currentFontSize -= 10;
+        if (currentFontSize < 70) currentFontSize = 70;
+        body.style.fontSize = currentFontSize + '%';
+        localStorage.setItem('fontSize', currentFontSize);
+    });
+    
+    document.getElementById('highContrast').addEventListener('click', function() {
+        body.classList.toggle('high-contrast');
+        localStorage.setItem('highContrast', body.classList.contains('high-contrast'));
+    });
+    
+    document.getElementById('lightBackground').addEventListener('click', function() {
+        body.classList.toggle('light-background');
+        localStorage.setItem('lightBackground', body.classList.contains('light-background'));
+    });
+    
+    document.getElementById('linksUnderline').addEventListener('click', function() {
+        body.classList.toggle('links-underline');
+        localStorage.setItem('linksUnderline', body.classList.contains('links-underline'));
+    });
+    
+    document.getElementById('readableFont').addEventListener('click', function() {
+        body.classList.toggle('readable-font');
+        localStorage.setItem('readableFont', body.classList.contains('readable-font'));
+    });
+    
+    document.getElementById('textToSpeech').addEventListener('click', function() {
+        if (isSpeaking) {
+            speechSynthesis.cancel();
+            isSpeaking = false;
+            return;
+        }
+        
+        const pageText = document.body.innerText;
+        speechUtterance = new SpeechSynthesisUtterance(pageText);
+        speechUtterance.lang = 'id-ID';
+        
+        speechUtterance.onend = function() {
+            isSpeaking = false;
+        };
+        
+        speechSynthesis.speak(speechUtterance);
+        isSpeaking = true;
+    });
+    
+    document.getElementById('resetAccessibility').addEventListener('click', function() {
+        currentFontSize = 100;
+        body.style.fontSize = '';
+        body.classList.remove('high-contrast', 'light-background', 'links-underline', 'readable-font');
+        
+        ['fontSize', 'highContrast', 'lightBackground', 'linksUnderline', 'readableFont'].forEach(item => {
+            localStorage.removeItem(item);
         });
-    </script>
+        
+        if (isSpeaking) {
+            speechSynthesis.cancel();
+            isSpeaking = false;
+        }
+    });
+    
+    function loadSettings() {
+        const savedFontSize = localStorage.getItem('fontSize');
+        if (savedFontSize) {
+            currentFontSize = parseInt(savedFontSize);
+            body.style.fontSize = currentFontSize + '%';
+        }
+        
+        if (localStorage.getItem('highContrast') === 'true') {
+            body.classList.add('high-contrast');
+        }
+        
+        if (localStorage.getItem('lightBackground') === 'true') {
+            body.classList.add('light-background');
+        }
+        
+        if (localStorage.getItem('linksUnderline') === 'true') {
+            body.classList.add('links-underline');
+        }
+        
+        if (localStorage.getItem('readableFont') === 'true') {
+            body.classList.add('readable-font');
+        }
+    }
+    
+    window.addEventListener('resize', function() {
+        const rect = widget.getBoundingClientRect();
+        const maxX = window.innerWidth - widget.offsetWidth;
+        const maxY = window.innerHeight - widget.offsetHeight;
+        
+        if (rect.left > maxX || rect.top > maxY) {
+            widget.style.left = Math.min(rect.left, maxX) + 'px';
+            widget.style.top = Math.min(rect.top, maxY) + 'px';
+        }
+    });
+    
+    loadPosition();
+    loadSettings();
+});
+</script>
 
+<!-- Footer -->
 <footer class="bg-blue text-blue-900">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
                <div class="flex items-center mb-6">
                     <span class="w-15 h-15 flex items-center justify-center">
-        <img src="logo/pln.png" alt="Logo PLN" class="w-full h-full object-contain">
-    </span>
-    
-    <!-- Logo 2 -->
-    <span class="w-15 h-15 flex items-center justify-center ml-2">
-        <img src="logo/ICONNET.png" alt="Logo ICONNET" class="w-full h-full object-contain">
-    </span>
+                        <img src="logo/pln.png" alt="Logo PLN" class="w-full h-full object-contain">
+                    </span>
+                    <span class="w-15 h-15 flex items-center justify-center ml-2">
+                        <img src="logo/ICONNET.png" alt="Logo ICONNET" class="w-full h-full object-contain">
+                    </span>
                </div>
                 <p class="text-blue-900 mb-4">Kualitas dan kecepatan yang terus bertambah menjadi kebutuhan baik di rumah, kantor, dan banyak tempat lainnya membuat kami memberikan layanan terbaik untuk anda.</p>
                 <div class="flex space-x-4">
@@ -1071,19 +1002,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="w-5 h-5 flex items-center justify-center">
                             <i class="ri-mail-line text-sm"></i>
                         </div>
-                        <span class="text-sm">info@PLN.ac.id</span>
+                        <span class="text-sm">info@iconnet.id</span>
                     </div>
                 </div>
             </div>
             <div>
-                <h3 class="text-lg font-semibold mb-4">Tautan Cepat</h3>
+                <h3 class="text-lg font-semibold mb-4">Layanan & Informasi</h3>
                 <ul class="space-y-2 text-blue-900">
-                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Portal Akademik</a></li>
-                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">E-Learning</a></li>
-                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Perpustakaan Digital</a></li>
-                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Jurnal Elektronik</a></li>
-                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Sistem Informasi</a></li>
-                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Career Center</a></li>
+                    <li><a href="index.php" class="text-sm hover:text-blue-700 transition-colors">Beranda</a></li>
+                    <li><a href="berita.php" class="text-sm hover:text-blue-700 transition-colors">Berita & Artikel</a></li>
+                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Tentang ICONNET</a></li>
+                    <li><a href="#" class="text-sm hover:text-blue-700 transition-colors">Visi & Misi</a></li>
                 </ul>
             </div>
             <div>
@@ -1100,7 +1029,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
         <div class="border-t border-blue-600 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p class="text-blue-900 text-sm">© 2025 PLN ICONNET. All Right Reserved.</p>
+           <p class="text-blue-900 text-sm">© <?= date('Y') ?> PLN ICONNET. All Right Reserved.</p>
             <div class="flex space-x-6 mt-4 md:mt-0">
                 <a href="#" class="text-blue-900 text-sm hover:text-blue-700 transition-colors">Kebijakan Privasi</a>
                 <a href="#" class="text-blue-900 text-sm hover:text-blue-700 transition-colors">Syarat & Ketentuan</a>
@@ -1109,80 +1038,75 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
     <div class="footer-image">
-        <img src="uploads/Bgfooter3.png" alt="Footer Image">
+        <img src="logo/Bgfooter.png" alt="Footer Image">
     </div>
 </footer>
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.querySelector("#searchInput");
+    const searchResults = document.querySelector("#searchResults");
 
+    let timeout = null;
 
-        <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const searchInput = document.querySelector("#searchInput");
-            const searchResults = document.querySelector("#searchResults");
+    searchInput.addEventListener("input", function () {
+        clearTimeout(timeout);
+        const query = this.value.trim();
 
-            let timeout = null;
+        if (query.length < 2) {
+            searchResults.innerHTML = "";
+            searchResults.classList.add("hidden");
+            return;
+        }
 
-            searchInput.addEventListener("input", function () {
-                clearTimeout(timeout);
-                const query = this.value.trim();
-
-                if (query.length < 2) {
-                    searchResults.innerHTML = "";
-                    searchResults.classList.add("hidden");
-                    return;
-                }
-
-                timeout = setTimeout(() => {
-                    fetch(`search.php?query=${encodeURIComponent(query)}`)
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.length > 0) {
-                                let html = "";
-                                data.forEach(article => {
-                                    html += `
-                                        <a href="artikel.php?slug=${encodeURIComponent(article.slug)}"
-                                           class="block px-4 py-2 hover:bg-gray-100 border-b border-gray-200 last:border-b-0 no-underline text-gray-900 hover:text-primary">
-                                            <div class="font-medium text-gray-900">${article.title}</div>
-                                            <div class="text-xs text-gray-500">${article.category} • ${new Date(article.created_at).toLocaleDateString('id-ID')}</div>
-                                        </a>
-                                    `;
-                                });
-                                searchResults.innerHTML = html;
-                                searchResults.classList.remove("hidden");
-                            } else {
-                                searchResults.innerHTML = `<div class="px-4 py-2 text-gray-500">Tidak ada hasil</div>`;
-                                searchResults.classList.remove("hidden");
-                            }
-                        })
-                        .catch(err => console.error(err));
-                }, 300); // delay 300ms
-            });
-
-            // klik di luar -> sembunyikan popup
-            document.addEventListener("click", function (e) {
-                if (!searchResults.contains(e.target) && e.target !== searchInput) {
-                    searchResults.classList.add("hidden");
-                }
-            });
-        });
-
-        </script>
-
-      <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Hilangkan notifikasi setelah animasi selesai
-            const notification = document.getElementById('welcomeNotification');
-            if (notification) {
-                notification.addEventListener('animationend', function(e) {
-                    if (e.animationName === 'fadeOut') {
-                        notification.remove();
+        timeout = setTimeout(() => {
+            fetch(`search.php?query=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        let html = "";
+                        data.forEach(article => {
+                            html += `
+                                <a href="artikel.php?slug=${encodeURIComponent(article.slug)}"
+                                   class="block px-4 py-2 hover:bg-gray-100 border-b border-gray-200 last:border-b-0 no-underline text-gray-900 hover:text-primary">
+                                    <div class="font-medium text-gray-900">${article.title}</div>
+                                    <div class="text-xs text-gray-500">${article.category} • ${new Date(article.created_at).toLocaleDateString('id-ID')}</div>
+                                </a>
+                            `;
+                        });
+                        searchResults.innerHTML = html;
+                        searchResults.classList.remove("hidden");
+                    } else {
+                        searchResults.innerHTML = `<div class="px-4 py-2 text-gray-500">Tidak ada hasil</div>`;
+                        searchResults.classList.remove("hidden");
                     }
-                });
+                })
+                .catch(err => console.error(err));
+        }, 300);
+    });
+
+    document.addEventListener("click", function (e) {
+        if (!searchResults.contains(e.target) && e.target !== searchInput) {
+            searchResults.classList.add("hidden");
+        }
+    });
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const notification = document.getElementById('welcomeNotification');
+    if (notification) {
+        notification.addEventListener('animationend', function(e) {
+            if (e.animationName === 'fadeOut') {
+                notification.remove();
             }
         });
-    </script>
+    }
+});
+</script>
 
-    <script>
+<script>
 function getTld(hostname) {
   const parts = hostname.split('.');
   if (parts.length <= 2) return hostname;         
@@ -1228,25 +1152,24 @@ document.addEventListener('DOMContentLoaded', function() {
   if (btnId) btnId.addEventListener('click', ()=> setLanguage('id'));
   if (btnEn) btnEn.addEventListener('click', ()=> setLanguage('en'));
 
- 
   const current = localStorage.getItem('site_lang') || 'id';
   if (current === 'en' && btnEn) btnEn.classList.add('font-semibold');
   if (current === 'id' && btnId) btnId.classList.add('font-semibold');
 });
-    </script>
+</script>
 
-    <script type="text/javascript">
-    function googleTranslateElementInit() {
+<script type="text/javascript">
+function googleTranslateElementInit() {
     new google.translate.TranslateElement({
         pageLanguage: 'id',              
         includedLanguages: 'id,en',      
         layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
         autoDisplay: false
     }, 'google_translate_element');
-    }
-    </script>
-    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
-    <script>
+}
+</script>
+<script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit" async defer></script>
+<script>
 let lastScrollTop = 0;
 let btn = document.getElementById("scrollUpBtn");
 
@@ -1268,7 +1191,6 @@ btn.addEventListener("click", function() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-// Intersection Observer for scroll-triggered animations
 document.addEventListener('DOMContentLoaded', function() {
     const observerOptions = {
         threshold: 0.1,
@@ -1283,7 +1205,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }, observerOptions);
 
-    // Observe all elements with animate-on-scroll class
     const animateElements = document.querySelectorAll('.animate-on-scroll');
     animateElements.forEach(element => {
         observer.observe(element);
