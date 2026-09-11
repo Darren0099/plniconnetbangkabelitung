@@ -1,0 +1,87 @@
+<section class="py-16 bg-white animate-on-scroll">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- KOLOM 1: BISNIS -->
+            <div>
+                <h2 class="text-xl font-bold text-primary inline-block mb-6">Bisnis</h2>
+                <div class="space-y-6">
+                    <?php 
+                    $query_bisnis = mysqli_query($conn, "SELECT * FROM articles WHERE status = 'published' AND category = 'bisnis' ORDER BY created_at DESC LIMIT 3");
+                    $count = 0;
+                    while ($row = mysqli_fetch_assoc($query_bisnis)): 
+                        $count++;
+                        $image_path = !empty($row['featured_image']) && isImage($row['featured_image']) ? 
+                            'admin/uploads/articles/'.htmlspecialchars(basename($row['featured_image'])) : 
+                            'https://via.placeholder.com/600x400?text=No+Image';
+                    ?>
+                        <?php if ($count === 1): ?>
+                            <article>
+                                <a href="artikel.php?slug=<?= urlencode($row['slug']) ?>" class="no-underline">
+                                    <img src="<?= $image_path ?>" alt="<?= htmlspecialchars($row['title']) ?>" class="w-full h-48 object-cover rounded-lg mb-4 hover:opacity-90 transition-opacity">
+                                    <h3 class="font-semibold text-gray-900 mb-2 hover:text-primary transition-colors"><?= htmlspecialchars($row['title']) ?></h3>
+                                    <span class="text-sm text-gray-500"><?= date('d M Y, H:i', strtotime($row['created_at'])) ?></span>
+                                </a>
+                            </article>
+                        <?php else: ?>
+                            <article class="flex items-start space-x-4 border-t pt-4">
+                                <a href="artikel.php?slug=<?= urlencode($row['slug']) ?>" class="flex items-start space-x-4 w-full no-underline">
+                                    <img src="<?= $image_path ?>" alt="<?= htmlspecialchars($row['title']) ?>" class="w-20 h-16 object-cover rounded hover:opacity-90 transition-opacity">
+                                    <div class="flex-1">
+                                        <h3 class="text-sm font-medium text-gray-900 hover:text-primary transition-colors"><?= htmlspecialchars(substr($row['title'], 0, 60)) ?>...</h3>
+                                        <span class="text-xs text-gray-500"><?= date('d M Y, H:i', strtotime($row['created_at'])) ?></span>
+                                    </div>
+                                </a>
+                            </article>
+                        <?php endif; ?>
+                    <?php endwhile; ?>
+                </div>
+                <a href="kategori.php?category=bisnis" class="mt-4 inline-flex items-center text-primary hover:text-primary/80 transition-colors no-underline">
+                    Lihat Semua <i class="ri-arrow-right-line ml-1"></i>
+                </a>
+            </div>
+
+            <!-- KOLOM 2: GABUNGAN KESEHATAN & LIFESTYLE -->
+            <div>
+                <!-- Judul Kolom Gabungan -->
+                <h2 class="text-xl font-bold text-primary inline-block mb-6">Kesehatan & Lifestyle</h2>
+                <div class="space-y-6">
+                    <?php 
+                    // KUNCINYA DI SINI: Pake IN ('kesehatan', 'lifestyle') buat narik 2 kategori sekaligus
+                    $query_gabungan = mysqli_query($conn, "SELECT * FROM articles WHERE status = 'published' AND category IN ('kesehatan', 'lifestyle') ORDER BY created_at DESC LIMIT 3");
+                    $count = 0;
+                    while ($row = mysqli_fetch_assoc($query_gabungan)): 
+                        $count++;
+                        $image_path = !empty($row['featured_image']) && isImage($row['featured_image']) ? 
+                            'admin/uploads/articles/'.htmlspecialchars(basename($row['featured_image'])) : 
+                            'https://via.placeholder.com/600x400?text=No+Image';
+                    ?>
+                        <?php if ($count === 1): ?>
+                            <article>
+                                <a href="artikel.php?slug=<?= urlencode($row['slug']) ?>" class="no-underline">
+                                    <img src="<?= $image_path ?>" alt="<?= htmlspecialchars($row['title']) ?>" class="w-full h-48 object-cover rounded-lg mb-4 hover:opacity-90 transition-opacity">
+                                    <h3 class="font-semibold text-gray-900 mb-2 hover:text-primary transition-colors"><?= htmlspecialchars($row['title']) ?></h3>
+                                    <span class="text-sm text-gray-500"><?= date('d M Y, H:i', strtotime($row['created_at'])) ?></span>
+                                </a>
+                            </article>
+                        <?php else: ?>
+                            <article class="flex items-start space-x-4 border-t pt-4">
+                                <a href="artikel.php?slug=<?= urlencode($row['slug']) ?>" class="flex items-start space-x-4 w-full no-underline">
+                                    <img src="<?= $image_path ?>" alt="<?= htmlspecialchars($row['title']) ?>" class="w-20 h-16 object-cover rounded hover:opacity-90 transition-opacity">
+                                    <div class="flex-1">
+                                        <h3 class="text-sm font-medium text-gray-900 hover:text-primary transition-colors"><?= htmlspecialchars(substr($row['title'], 0, 60)) ?>...</h3>
+                                        <span class="text-xs text-gray-500"><?= date('d M Y, H:i', strtotime($row['created_at'])) ?></span>
+                                    </div>
+                                </a>
+                            </article>
+                        <?php endif; ?>
+                    <?php endwhile; ?>
+                </div>
+                <a href="berita.php" class="mt-4 inline-flex items-center text-primary hover:text-primary/80 transition-colors no-underline">
+                    Lihat Semua <i class="ri-arrow-right-line ml-1"></i>
+                </a>
+            </div>
+
+        </div>
+    </div>
+</section>
