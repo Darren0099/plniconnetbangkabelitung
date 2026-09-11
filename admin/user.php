@@ -1,524 +1,634 @@
 <?php
 session_start();
-require 'koneksi.php';
-require 'functions.php';
+require_once 'koneksi.php';
 
-requireAdmin();
+// Cek apakah user sudah login
+if (!isset($_SESSION['user'])) {
+    header("Location: index.php");
+    exit();
+}
 
-// Handle delete user
-if (isset($_GET['delete']) && is_numeric($_GET['delete'])) {
-    $userId = $_GET['delete'];
+$user_id = $_SESSION['user']['id'];
+$error = '';
+$success = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_profile'])) {
+    $username = trim($_POST['username']);
+    $email = trim($_POST['email']);
     
-    // Prevent deleting own account
-    if ($userId == $_SESSION['user']['id']) {
-        setFlashMessage('Anda tidak dapat menghapus akun sendiri!', 'error');
-        header("Location: user.php");
-        exit();
+    if (empty($username)) {
+        $error = 'Username tidak boleh kosong';
+    } elseif (empty($email)) {
+        $error = 'Email tidak boleh kosong';
+    } else {
+        
+        $stmt = $conn->prepare("UPDATE user SET username = ?, email = ? WHERE id = ?");
+        $stmt->bind_param("ssi", $username, $email, $user_id);
+        
+        if ($stmt->execute()) {
+            $_SESSION['user']['username'] = $username;
+            $_SESSION['user']['email'] = $email;
+            $success = 'Profil berhasil diperbarui';
+        } else {
+            $error = 'Gagal memperbarui profil: ' . $conn->error;
+        }
     }
+}
+
+// Proses ubah password
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['change_password'])) {
+    $current_password = $_POST['current_password'];
+    $new_password = $_POST['new_password'];
+    $confirm_password = $_POST['confirm_password'];
     
-    // Check if user exists and is not the last admin
-    $checkQuery = "SELECT role FROM user WHERE id = ?";
-    $stmt = $conn->prepare($checkQuery);
-    $stmt->bind_param("i", $userId);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows > 0) {
+    // Validasi
+    if (empty($current_password) || empty($new_password) || empty($confirm_password)) {
+        $error = 'Semua field password harus diisi';
+    } elseif ($new_password !== $confirm_password) {
+        $error = 'Password baru dan konfirmasi password tidak cocok';
+    } elseif (strlen($new_password) < 8) {
+        $error = 'Password minimal 8 karakter';
+    } else {
+        // Verifikasi password saat ini
+        $stmt = $conn->prepare("SELECT password FROM users WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
         $user = $result->fetch_assoc();
         
-        // Check if this is the last admin
-        if ($user['role'] == 'admin') {
-            $adminCountQuery = "SELECT COUNT(*) as admin_count FROM user WHERE role = 'admin'";
-            $adminResult = mysqli_query($conn, $adminCountQuery);
-            $adminRow = mysqli_fetch_assoc($adminResult);
-            if ($adminRow['admin_count'] <= 1) {
-                setFlashMessage('Tidak dapat menghapus admin terakhir!', 'error');
-                header("Location: user.php");
-                exit();
+        if (password_verify($current_password, $user['password'])) {
+            // Update password baru
+            $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+            $stmt->bind_param("si", $hashed_password, $user_id);
+            
+            if ($stmt->execute()) {
+                $success = 'Password berhasil diubah';
+            } else {
+                $error = 'Gagal mengubah password';
             }
-        }
-        
-        // Delete user
-        $deleteQuery = "DELETE FROM user WHERE id = ?";
-        $stmt = $conn->prepare($deleteQuery);
-        $stmt->bind_param("i", $userId);
-        
-        if ($stmt->execute()) {
-            setFlashMessage('User berhasil dihapus!', 'success');
         } else {
-            setFlashMessage('Gagal menghapus user!', 'error');
+            $error = 'Password saat ini salah';
         }
-    } else {
-        setFlashMessage('User tidak ditemukan!', 'error');
     }
-    
-    header("Location: user.php");
-    exit();
 }
 
-// Handle update user
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'update') {
-    $userId = $_POST['user_id'];
-    $newRole = $_POST['role'];
-    $newPassword = !empty($_POST['new_password']) ? password_hash($_POST['new_password'], PASSWORD_DEFAULT) : null;
-    
-    $updates = [];
-    $types = "";
-    $params = [];
-    
-    if ($newRole) {
-        $updates[] = "role = ?";
-        $types .= "s";
-        $params[] = $newRole;
-    }
-    
-    if ($newPassword) {
-        $updates[] = "password = ?";
-        $types .= "s";
-        $params[] = $newPassword;
-    }
-    
-    if (!empty($updates)) {
-        $updateQuery = "UPDATE user SET " . implode(", ", $updates) . " WHERE id = ?";
-        $types .= "i";
-        $params[] = $userId;
-        
-        $stmt = $conn->prepare($updateQuery);
-        $stmt->bind_param($types, ...$params);
-        
-        if ($stmt->execute()) {
-            setFlashMessage('User berhasil diperbarui!', 'success');
-        } else {
-            setFlashMessage('Gagal memperbarui user!', 'error');
-        }
-    } else {
-        setFlashMessage('Tidak ada perubahan yang dilakukan!', 'info');
-    }
-    
-    header("Location: user.php");
-    exit();
-}
-
-// Handle search
-$search = isset($_GET['search']) ? trim($_GET['search']) : '';
-$searchTerm = '%' . mysqli_real_escape_string($conn, $search) . '%';
-
-// Query users
-$query = "SELECT id, username, role FROM user WHERE username LIKE ? OR role LIKE ? ORDER BY id";
-$stmt = $conn->prepare($query);
-$stmt->bind_param("ss", $searchTerm, $searchTerm);
+// Ambil data user terbaru
+$stmt = $conn->prepare("SELECT * FROM user WHERE id = ?");
+$stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
-$users = mysqli_fetch_all($result, MYSQLI_ASSOC);
+$user = $result->fetch_assoc();
+
+// Update session dengan data terbaru
+$_SESSION['user'] = $user;
 ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>User Management - Admin</title>
-<script src="https://cdn.tailwindcss.com/3.4.16"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
-<link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
-tailwind.config = {
-  theme: {
-    extend: {
-      colors: {
-        primary: '#6366F1',
-        secondary: '#4F46E5'
-      },
-      borderRadius: {
-        'none': '0px',
-        'sm': '4px',
-        DEFAULT: '8px',
-        'md': '12px',
-        'lg': '16px',
-        'xl': '20px',
-        '2xl': '24px',
-        '3xl': '32px',
-        'full': '9999px',
-        'button': '8px'
-      }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil Pengguna - APLN</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/remixicon/4.6.0/remixicon.min.css" rel="stylesheet">
+    <style>
+    /* Sidebar Animation */
+    #sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.3s ease-in-out;
     }
-  }
-}
-</script>
-<style>
-#editModal {
-    transition: opacity 0.3s ease, visibility 0.3s ease;
-}
-#editModal:not(.hidden) {
-    opacity: 1;
-    visibility: visible;
-}
-#editModal.hidden {
-    opacity: 0;
-    visibility: hidden;
-}
-#editModal .modal-content {
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    transform: translateY(0);
-    transition: transform 0.3s ease;
-}
-#editModal.hidden .modal-content {
-    transform: translateY(-20px);
-}
-.swal2-popup {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    border-radius: 12px;
-}
-.swal2-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-.swal2-actions button {
-    border-radius: 8px !important;
-    padding: 0.5rem 1.5rem !important;
-}
-.swal2-confirm {
-    background-color: #6366F1 !important;
-}
-.swal2-cancel {
-    background-color: #EF4444 !important;
-}
 
-/* Page Load Animations */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(30px);
+    #sidebar:not(.hidden) {
+        transform: translateX(0);
     }
-    to {
-        opacity: 1;
+
+    /* Burger Menu Animation */
+    .burger-menu {
+        transition: transform 0.3s ease;
+    }
+
+    .burger-menu.active i {
+        transform: rotate(90deg);
+    }
+
+    /* Navigation Link Animations */
+    nav a {
+        transition: all 0.2s ease;
+        position: relative;
+    }
+
+    nav a:hover {
+        transform: translateX(4px);
+    }
+
+    nav a::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 0;
+        background: rgba(99, 102, 241, 0.1);
+        transition: width 0.3s ease;
+        border-radius: 8px;
+    }
+
+    nav a:hover::before {
+        width: 100%;
+    }
+
+    /* Button Animations */
+    button {
+        transition: all 0.2s ease;
+    }
+
+    button:hover {
+        transform: translateY(-1px);
+    }
+
+    button:active {
         transform: translateY(0);
     }
-}
 
-@keyframes fadeInLeft {
-    from {
+    /* Form Input Animations */
+    input, select, textarea {
+        transition: all 0.3s ease;
+    }
+
+    input:focus, select:focus, textarea:focus {
+        transform: scale(1.01);
+    }
+
+    /* Card Animation */
+    .card {
+        animation: slideInUp 0.5s ease-out;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Loading Animation */
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
+
+    /* Pulse Animation for Notifications */
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    .animate-pulse {
+        animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Page Load Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeInLeft {
+        from {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes fadeInRight {
+        from {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .animate-fade-in-up {
+        animation: fadeInUp 0.6s ease-out forwards;
         opacity: 0;
-        transform: translateX(-30px);
     }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
 
-@keyframes fadeInRight {
-    from {
+    .animate-fade-in-left {
+        animation: fadeInLeft 0.6s ease-out forwards;
         opacity: 0;
-        transform: translateX(30px);
     }
-    to {
-        opacity: 1;
-        transform: translateX(0);
+
+    .animate-fade-in-right {
+        animation: fadeInRight 0.6s ease-out forwards;
+        opacity: 0;
     }
-}
-
-.animate-fade-in-up {
-    animation: fadeInUp 0.6s ease-out forwards;
-    opacity: 0;
-}
-
-.animate-fade-in-left {
-    animation: fadeInLeft 0.6s ease-out forwards;
-    opacity: 0;
-}
-
-.animate-fade-in-right {
-    animation: fadeInRight 0.6s ease-out forwards;
-    opacity: 0;
-}
-</style>
+    </style>
 </head>
 <body class="bg-gray-50">
     <!-- Burger Menu for Mobile -->
     <div class="md:hidden fixed top-4 right-4 z-40">
-        <button onclick="toggleSidebar()" class="p-2 bg-white rounded-lg shadow-md border border-gray-200">
-            <i class="ri-menu-line text-gray-600"></i>
+        <button onclick="toggleSidebar()" class="p-2 bg-white rounded-lg shadow-md border border-gray-200 transition-all duration-300 hover:shadow-lg">
+            <i class="ri-menu-line text-gray-600 transition-transform duration-300"></i>
         </button>
     </div>
 
-<div class="flex min-h-screen">
-
-  <aside id="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 z-30 hidden md:block">
-    <div class="flex items-center px-6 py-4 border-b border-gray-200">
-      <img src="../logo/ICONNET.png" alt="Iconnet Logo" class="h-10 w-auto object-contain">
-    </div>
-    <nav class="p-4 space-y-2">
-      <a href="dashboard.php" class="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
-        <div class="w-5 h-5 flex items-center justify-center">
-          <i class="ri-home-line"></i>
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 z-30 hidden md:block">
+        <div class="flex items-center px-6 py-4 border-b border-gray-200">
+            <img src="../logo/ICONNET.png" alt="Iconnet Logo" class="h-10 w-auto object-contain">
         </div>
-        <span>Dashboard</span>
-      </a>
-      <a href="tambahartikel.php" class="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
-        <div class="w-5 h-5 flex items-center justify-center">
-          <i class="ri-article-line"></i>
-        </div>
-        <span>Buat Artikel</span>
-      </a>
-      <a href="user.php" class="flex items-center gap-3 px-3 py-2 text-primary bg-primary/10 rounded-lg">
-        <div class="w-5 h-5 flex items-center justify-center">
-          <i class="ri-team-line"></i>
-        </div>
-        <span>User Management</span>
-      </a>
-      <a href="profile.php" class="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-gray-50 rounded-lg">
-        <div class="w-5 h-5 flex items-center justify-center">
-          <i class="ri-user-settings-line"></i>
-        </div>
-        <span>My Profile</span>
-      </a>
-    </nav>
-    <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-      <a href="logout.php" class="flex items-center gap-3 px-3 py-2 text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
-        <div class="w-5 h-5 flex items-center justify-center">
-          <i class="ri-logout-box-line"></i>
-        </div>
-        <span>Keluar</span>
-      </a>
-    </div>
-  </aside>
-
-  <!-- Main Content -->
-  <div class="flex-1 ml-0 md:ml-64">
-    <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
-      <div class="flex items-center justify-between">
-      </div>
-    </header>
-
-    <main class="p-6">
-      <?php displayFlashMessage(); ?>
-      
-      <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">User Management</h1>
-        <p class="text-gray-600">Kelola akun pengguna yang terdaftar di sistem.</p>
-      </div>
-
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
-          <h3 class="text-lg font-semibold text-gray-900">Daftar Pengguna</h3>
-          <form method="GET" class="flex items-center space-x-2">
-            <input type="text" name="search" placeholder="Cari pengguna..." value="<?php echo htmlspecialchars($search); ?>" 
-                   class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" />
-            <button type="submit" 
-                    class="px-3 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition">
-              <i class="ri-search-line"></i>
+        <nav class="p-4 space-y-2">
+            <a href="dashboard.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($active_page == 'dashboard.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
+                <div class="w-5 h-5 flex items-center justify-center">
+                    <i class="ri-home-line"></i>
+                </div>
+                <span>Dashboard</span>
+            </a>
+            <a href="artikel.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($active_page == 'artikel.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
+                <div class="w-5 h-5 flex items-center justify-center">
+                    <i class="ri-article-line"></i>
+                </div>
+                <span>Artikel</span>
+            </a>
+            <a href="user.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($active_page == 'user.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
+                <div class="w-5 h-5 flex items-center justify-center">
+                    <i class="ri-team-line"></i>
+                </div>
+                <span>User Management</span>
+            </a>
+            <a href="profile.php" class="flex items-center gap-3 px-3 py-2 rounded-lg <?= ($active_page == 'profile.php') ? 'text-primary bg-primary/10' : 'text-gray-600 hover:bg-gray-50' ?>">
+                <div class="w-5 h-5 flex items-center justify-center">
+                    <i class="ri-user-settings-line"></i>
+                </div>
+                <span>My Profile</span>
+            </a>
+        </nav>
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+            <button onclick="confirmLogout()" class="flex items-center gap-3 px-3 py-2 w-full text-gray-600 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors">
+                <div class="w-5 h-5 flex items-center justify-center">
+                    <i class="ri-logout-box-line"></i>
+                </div>
+                <span>Keluar</span>
             </button>
-          </form>
         </div>
-        <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead class="bg-gray-50">
-              <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">No</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Pengguna</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
-              </tr>
-            </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <?php if (count($users) > 0): ?>
-                <?php $no = 1; foreach ($users as $user): ?>
-                  <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900"><?php echo $no++; ?></td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
-                          <i class="ri-user-line text-gray-600"></i>
-                        </div>
-                        <span class="text-sm text-gray-900"><?php echo htmlspecialchars($user['username']); ?></span>
-                      </div>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap">
-                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
-                        <?php echo $user['role'] == 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'; ?>">
-                        <?php echo htmlspecialchars(ucfirst($user['role'] ?? 'user')); ?>
-                      </span>
-                    </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div class="flex items-center gap-2">
-                        <button onclick="openEditModal(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['username']); ?>', '<?php echo $user['role']; ?>')" 
-                          class="text-primary hover:text-secondary rounded-button whitespace-nowrap"
-                          title="Edit User">
-                          <div class="w-4 h-4 flex items-center justify-center">
-                            <i class="ri-edit-line"></i>
-                          </div>
-                        </button>
-                        <?php if ($user['id'] != $_SESSION['user']['id']): ?>
-                          <button onclick="confirmDelete(<?php echo $user['id']; ?>, '<?php echo htmlspecialchars($user['username']); ?>')" 
-                            class="text-red-600 hover:text-red-800 rounded-button whitespace-nowrap"
-                            title="Hapus User">
-                            <div class="w-4 h-4 flex items-center justify-center">
-                              <i class="ri-delete-bin-line"></i>
-                            </div>
-                          </button>
-                        <?php endif; ?>
-                      </div>
-                    </td>
-                  </tr>
-                <?php endforeach; ?>
-              <?php else: ?>
-                <tr>
-                  <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                    Tidak ada pengguna ditemukan.
-                  </td>
-                </tr>
-              <?php endif; ?>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
-  </div>
-</div>
+    </aside>
 
-<!-- Edit User Modal -->
-<div id="editModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-  <div class="bg-white rounded-xl shadow-lg w-full max-w-md max-h-[90vh] overflow-y-auto">
-    <div class="p-6">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="text-xl font-bold text-gray-800">Edit User</h3>
-        <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700">
-          <i class="ri-close-line text-2xl"></i>
-        </button>
-      </div>
-      
-      <form id="editForm" method="POST" class="space-y-4">
-        <input type="hidden" name="action" value="update">
-        <input type="hidden" id="editUserId" name="user_id">
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-          <input type="text" id="editUsername" class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+    <!-- Main Content -->
+    <div class="flex-1 ml-0 md:ml-64">
+        <div class="p-8">
+            <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden animate-fade-in-up" style="animation-delay: 0.1s;">
+                <!-- Header -->
+                <div class="bg-primary p-6 text-black animate-fade-in-left" style="animation-delay: 0.2s;">
+                    <h1 class="text-2xl font-bold text-black">Informasi Pribadi</h1>
+                    <p class="text-black">Perbarui dan kelola detail profil APLN Anda</p>
+                </div>
+
+                <!-- Notifikasi -->
+                <?php if (!empty($error)): ?>
+                    <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mx-6 mt-4 animate-fade-in-right" style="animation-delay: 0.3s;">
+                        <p><?php echo htmlspecialchars($error); ?></p>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($success)): ?>
+                    <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mx-6 mt-4 animate-fade-in-right" style="animation-delay: 0.3s;">
+                        <p><?php echo htmlspecialchars($success); ?></p>
+                    </div>
+                <?php endif; ?>
+
+                <!-- Form Profil -->
+                <div class="p-6 animate-fade-in-up" style="animation-delay: 0.4s;">
+                    <form method="POST">
+                         <h2 class="text-lg font-semibold mb-4">Ubah Username</h2>
+                            <p class="text-gray-600 mb-6">Hi Selamat datang di Profile</p>
+
+                        <!-- Informasi Profil -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 animate-fade-in-up" style="animation-delay: 0.5s;">
+
+                            <div class="animate-fade-in-left" style="animation-delay: 0.6s;">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Username *</label>
+                                <input type="text" name="username" value="<?php echo htmlspecialchars($user['username']); ?>"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                            </div>
+
+                            <div class="animate-fade-in-right" style="animation-delay: 0.7s;">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                            </div>
+
+                            <div class="animate-fade-in-left" style="animation-delay: 0.8s;">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                <input type="text" value="<?php echo htmlspecialchars(ucfirst($user['role'])); ?>"
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100" readonly>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-end gap-3 animate-fade-in-up" style="animation-delay: 0.9s;">
+                            <!-- Tombol Atur Ulang -->
+                            <button type="button" onclick="confirmResetForm()"
+                                    class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
+                                <i class="ri-arrow-go-back-line mr-2"></i> Atur Ulang
+                            </button>
+
+                            <!-- Tombol Simpan Perubahan (ditambahkan) -->
+                           <button type="submit" name="update_profile"
+                                    class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                                <i class="ri-save-line mr-2"></i> Simpan Perubahan
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Ubah Password -->
+                    <div class="mt-12 pt-8 border-t border-gray-200 animate-fade-in-up" style="animation-delay: 1.0s;">
+                        <h2 class="text-lg font-semibold mb-4">Ubah Kata Sandi</h2>
+                        <p class="text-gray-600 mb-6">Pastikan kata sandi baru Anda kuat dan aman.</p>
+
+                        <form id="passwordForm" method="POST">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in-up" style="animation-delay: 1.1s;">
+                                <div class="animate-fade-in-left" style="animation-delay: 1.2s;">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Password Sekarang *</label>
+                                    <input type="password" name="current_password" placeholder="Masukkan password saat ini"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                                </div>
+
+                                <div class="animate-fade-in-right" style="animation-delay: 1.3s;">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Password Baru *</label>
+                                    <input type="password" name="new_password" placeholder="Masukkan password baru"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                                </div>
+
+                                <div class="animate-fade-in-left" style="animation-delay: 1.4s;">
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Konfirmasi Password Baru *</label>
+                                    <input type="password" name="confirm_password" placeholder="Konfirmasi password baru"
+                                           class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" required>
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end gap-3 mt-6 animate-fade-in-up" style="animation-delay: 1.5s;">
+                                <!-- Tombol Atur Ulang -->
+                                <button type="button" onclick="confirmResetPasswordForm()"
+                                        class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
+                                    <i class="ri-arrow-go-back-line mr-2"></i> Atur Ulang
+                                </button>
+
+                                <!-- Tombol Simpan Perubahan (ditambahkan) -->
+                                <button type="submit" name="change_password"
+                                        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition">
+                                    <i class="ri-save-line mr-2"></i> Simpan Perubahan
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
         </div>
-        
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-          <select id="editRole" name="role" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
-        </div>
-        
-        <div>
-          <label for="newPassword" class="block text-sm font-medium text-gray-700 mb-1">Password Baru (kosongkan jika tidak diubah)</label>
-          <input type="password" id="newPassword" name="new_password" 
-                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                 placeholder="Masukkan password baru">
-        </div>
-        
-        <div class="flex justify-end space-x-3 pt-4">
-          <button type="button" onclick="closeEditModal()" 
-                  class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition">
-            Batal
-          </button>
-          <button type="submit" 
-                  class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition flex items-center">
-            <i class="ri-save-line mr-2"></i> Simpan Perubahan
-          </button>
-        </div>
-      </form>
     </div>
-  </div>
-</div>
+
+    <!-- SweetAlert JS -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+    // Konfirmasi Logout
+    function confirmLogout() {
+        Swal.fire({
+            title: 'Yakin ingin keluar?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Keluar',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = 'logout.php';
+            }
+        });
+    }
+
+    // Konfirmasi Update Profil
+    function confirmProfileUpdate() {
+        Swal.fire({
+            title: 'Simpan Perubahan Profil?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Simpan',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.querySelector('form').submit();
+            }
+        });
+    }
+
+    // Konfirmasi Ubah Password
+    function confirmPasswordChange() {
+        const form = document.getElementById('passwordForm');
+        const newPassword = form.querySelector('input[name="new_password"]').value;
+        const confirmPassword = form.querySelector('input[name="confirm_password"]').value;
+        
+        if (newPassword !== confirmPassword) {
+            Swal.fire('Error!', 'Password baru dan konfirmasi tidak cocok', 'error');
+            return;
+        }
+        
+        if (newPassword.length < 8) {
+            Swal.fire('Error!', 'Password minimal 8 karakter', 'error');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Yakin ubah password?',
+            text: 'Anda harus login kembali setelah password diubah',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Ubah',
+            cancelButtonText: 'Batal',
+            reverseButtons: true
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    }
+
+    // Konfirmasi Reset Form
+    function confirmResetForm() {
+        Swal.fire({
+            title: 'Reset Form?',
+            text: 'Semua perubahan yang belum disimpan akan hilang',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Reset',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.querySelector('form').reset();
+                Swal.fire('Direset!', 'Form telah dikembalikan ke nilai awal', 'success');
+            }
+        });
+    }
+
+    // Konfirmasi Reset Password Form
+    function confirmResetPasswordForm() {
+        Swal.fire({
+            title: 'Reset Form Password?',
+            text: 'Semua perubahan password yang belum disimpan akan hilang',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Reset',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('passwordForm').reset();
+                Swal.fire('Direset!', 'Form password telah dikembalikan', 'success');
+            }
+        });
+    }
+    </script>
+    <script>
+        // Fungsi untuk handle submit form profil
+document.querySelector('form').addEventListener('submit', function(e) {
+    if (e.submitter.name === 'update_profile') {
+        e.preventDefault();
+        Swal.fire({
+            title: 'Simpan Perubahan Profil?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Simpan',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.submit();
+            }
+        });
+    }
+});
+
+// Fungsi untuk handle submit form password
+document.getElementById('passwordForm').addEventListener('submit', function(e) {
+    if (e.submitter.name === 'change_password') {
+        e.preventDefault();
+        
+        // Validasi password
+        const newPassword = this.querySelector('input[name="new_password"]').value;
+        const confirmPassword = this.querySelector('input[name="confirm_password"]').value;
+        
+        if (newPassword !== confirmPassword) {
+            Swal.fire('Error!', 'Password baru dan konfirmasi tidak cocok', 'error');
+            return;
+        }
+        
+        if (newPassword.length < 8) {
+            Swal.fire('Error!', 'Password minimal 8 karakter', 'error');
+            return;
+        }
+        
+        Swal.fire({
+            title: 'Yakin ubah password?',
+            text: 'Anda harus login kembali setelah password diubah',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Ubah',
+            cancelButtonText: 'Batal'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                this.submit();
+            }
+        });
+    }
+});
+    </script>
 
 <script>
-function confirmDelete(userId, username) {
-  Swal.fire({
-    title: 'Apakah Anda yakin?',
-    text: `User "${username}" akan dihapus secara permanen!`,
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonText: 'Ya, Hapus!',
-    cancelButtonText: 'Tidak, Batalkan',
-    reverseButtons: true,
-    customClass: {
-      confirmButton: 'swal2-confirm',
-      cancelButton: 'swal2-cancel'
-    }
-  }).then((result) => {
-    if (result.isConfirmed) {
-      window.location.href = `user.php?delete=${userId}`;
-    }
-  });
-}
-
-function openEditModal(userId, username, role) {
-  document.getElementById('editUserId').value = userId;
-  document.getElementById('editUsername').value = username;
-  document.getElementById('editRole').value = role;
-  document.getElementById('newPassword').value = '';
-  document.getElementById('editModal').classList.remove('hidden');
-}
-
-function closeEditModal() {
-  document.getElementById('editModal').classList.add('hidden');
-  document.getElementById('editForm').reset();
-}
-
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    sidebar.classList.toggle('hidden');
-}
-
-// Add page load animation
-document.addEventListener('DOMContentLoaded', function() {
-    // Animate burger menu
-    const burgerMenu = document.querySelector('.md\\:hidden');
-    if (burgerMenu) {
-        burgerMenu.classList.add('animate-fade-in-right');
-        setTimeout(() => burgerMenu.style.animationDelay = '0s', 100);
-    }
-
-    // Animate sidebar
-    const sidebar = document.getElementById('sidebar');
-    if (sidebar) {
-        sidebar.classList.add('animate-fade-in-left');
-        setTimeout(() => sidebar.style.animationDelay = '0.2s', 100);
-    }
-
-    // Animate header
-    const header = document.querySelector('header');
-    if (header) {
-        header.classList.add('animate-fade-in-up');
-        setTimeout(() => header.style.animationDelay = '0.4s', 100);
-    }
-
-    // Animate main title
-    const mainTitle = document.querySelector('main h1');
-    if (mainTitle) {
-        mainTitle.classList.add('animate-fade-in-up');
-        setTimeout(() => mainTitle.style.animationDelay = '0.6s', 100);
-    }
-
-    // Animate main description
-    const mainDesc = document.querySelector('main p');
-    if (mainDesc) {
-        mainDesc.classList.add('animate-fade-in-up');
-        setTimeout(() => mainDesc.style.animationDelay = '0.8s', 100);
-    }
-
-    // Animate table container
-    const tableContainer = document.querySelector('.bg-white.rounded-xl');
-    if (tableContainer) {
-        tableContainer.classList.add('animate-fade-in-up');
-        setTimeout(() => tableContainer.style.animationDelay = '1.0s', 100);
-    }
-
-    // Animate table rows
-    const tableRows = document.querySelectorAll('tbody tr');
-    tableRows.forEach((row, index) => {
-        row.classList.add('animate-fade-in-up');
-        setTimeout(() => row.style.animationDelay = `${1.2 + index * 0.1}s`, 100);
+    // Show SweetAlert when email is changed
+    document.querySelector('input[name="email"]').addEventListener('change', function() {
+        Swal.fire({
+            icon: 'info',
+            title: 'Email diubah',
+            text: 'Anda telah mengubah email Anda.',
+            confirmButtonText: 'OK'
+        });
     });
-});
+</script>
+
+<script>
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        const burgerBtn = document.querySelector('.md\\:hidden button');
+
+        sidebar.classList.toggle('hidden');
+
+        // Add burger menu animation
+        if (burgerBtn) {
+            burgerBtn.classList.toggle('active');
+        }
+    }
+
+    // Add page load animation
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate burger menu
+        const burgerMenu = document.querySelector('.md\\:hidden');
+        if (burgerMenu) {
+            burgerMenu.classList.add('animate-fade-in-right');
+            setTimeout(() => burgerMenu.style.animationDelay = '0s', 100);
+        }
+
+        // Animate sidebar
+        const sidebar = document.getElementById('sidebar');
+        if (sidebar) {
+            sidebar.classList.add('animate-fade-in-left');
+            setTimeout(() => sidebar.style.animationDelay = '0.2s', 100);
+        }
+
+        // Animate main content
+        const mainContent = document.querySelector('.flex-1');
+        if (mainContent) {
+            mainContent.classList.add('animate-fade-in-up');
+            setTimeout(() => mainContent.style.animationDelay = '0.4s', 100);
+        }
+
+        // Animate header
+        const header = document.querySelector('.bg-primary');
+        if (header) {
+            header.classList.add('animate-fade-in-up');
+            setTimeout(() => header.style.animationDelay = '0.6s', 100);
+        }
+
+        // Animate form sections
+        const formSections = document.querySelectorAll('form, .mt-12');
+        formSections.forEach((section, index) => {
+            section.classList.add('animate-fade-in-up');
+            setTimeout(() => section.style.animationDelay = `${0.8 + index * 0.2}s`, 100);
+        });
+
+        // Animate buttons
+        const buttons = document.querySelectorAll('button');
+        buttons.forEach((button, index) => {
+            button.classList.add('animate-fade-in-up');
+            setTimeout(() => button.style.animationDelay = `${1.2 + index * 0.1}s`, 100);
+        });
+    });
 </script>
 </body>
 </html>
