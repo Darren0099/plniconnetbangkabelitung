@@ -31,4 +31,25 @@ Ikuti langkah-langkah berikut untuk menjalankan proyek di server lokal (XAMPP / 
 Pindahkan direktori proyek ke dalam folder server web Anda (`htdocs` untuk XAMPP atau `www` untuk Laragon):
 ```bash
 cd C:/xampp/htdocs/
-git clone [https://github.com/username/website-artikel-pln-babel.git](https://github.com/username/website-artikel-pln-babel.git)
+git clone [https://github.com/username/website-artikel-pln-babel.git](https://github.com/username/website-artikel-pln-babel.git) 
+
+### 2. Import Database
+Buka phpMyAdmin (http://localhost/phpmyadmin).
+
+Buat database baru, misalnya dengan nama db_pln_babel.
+
+Import file database yang berada di dalam folder proyek (contoh: database/db_pln_babel.sql).
+
+3. Konfigurasi Koneksi Database
+Sesuaikan kredensial database pada file konfigurasi (misalnya config/koneksi.php atau config/database.php):
+
+PHP
+$host = "localhost";
+$user = "root";
+$pass = "";
+$db   = "db_pln_babel";
+4. Jalankan Aplikasi
+Buka browser dan akses URL berikut:
+
+Plaintext
+http://localhost/website-artikel-pln-babel
