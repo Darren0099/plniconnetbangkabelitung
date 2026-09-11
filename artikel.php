@@ -1,5 +1,7 @@
 <?php
 include 'admin/koneksi.php';
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Fungsi untuk cek apakah file adalah gambar
 function isImage($filename) {
@@ -40,9 +42,14 @@ $data = mysqli_fetch_assoc($query);
 $kategori = $data['category'];
 $artikel_slug = generateSlug($data['title']);
 
+// Logika penentuan waktu publikasi / terakhir diupdate
+$articleTime = (!empty($data['updated_at']) && $data['updated_at'] !== '0000-00-00 00:00:00') 
+    ? $data['updated_at'] 
+    : $data['created_at'];
+
 // Rekomendasi artikel lain dari kategori sama
 $rekomendasi = mysqli_query($conn, "
-    SELECT id, title, slug, created_at FROM articles 
+    SELECT id, title, slug, created_at, updated_at FROM articles 
     WHERE category = '$kategori' AND slug != '$slug' AND status = 'published' 
     ORDER BY created_at DESC 
     LIMIT 4
@@ -80,7 +87,6 @@ $kategori_query = mysqli_query($conn, "
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet"/>
 
     <style>
-       
         header {
             background-color: #ffffff;
             padding: 15px 0;
@@ -233,7 +239,6 @@ $kategori_query = mysqli_query($conn, "
             color: #005baa;
             font-size: 24px;
             cursor: pointer;
-            /* display: none; */ /* Make burger button visible on all screen sizes */
             padding: 5px;
         }
         
@@ -309,11 +314,6 @@ $kategori_query = mysqli_query($conn, "
                 order: 3;
             }
             
-            /* Remove display block for burger-btn here to keep it visible on all sizes */
-            /* #burger-btn {
-                display: block;
-            } */
-            
             .lang-buttons {
                 display: none;
             }
@@ -346,9 +346,7 @@ $kategori_query = mysqli_query($conn, "
             padding-left: 18px;
             margin-bottom: 20px;
         }
-    </style>
 
-    <style>
         .rounded-corners {
             border-radius: 8px;
         }
@@ -387,6 +385,7 @@ $kategori_query = mysqli_query($conn, "
                 <i class="ri-more-2-fill"></i>
             </button>
         </div>
+    </div>
 </header>
 
 <nav id="mobile-menu" class="mobile-menu-closed">
@@ -474,7 +473,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (btnEnMobile) btnEnMobile.addEventListener('click', () => setLanguage('en'));
 });
 </script>
-
 
 <script>
 function getTld(hostname) {
@@ -566,7 +564,6 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="container mt-4">
 
 <style>
-
 .page-title {
     position: relative;
     left: 50%;
@@ -594,9 +591,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .container.mt-4 {
     margin-top: 0; /* reset margin-top */
 }
-</style>
 
-<style>
 .related-post-link:hover,
 .related-post-link:active,
 .related-post-link:focus {
@@ -604,28 +599,27 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 </style>
 
-
 <div class="page-title">
     <h1>
         <?= htmlspecialchars($data['category']) ?>
     </h1>
 </div>
 
-
     <p class="text-muted">
-        Ditulis oleh <strong><?= htmlspecialchars($data['author_name']) ?></strong> |
-        Kategori: <?= htmlspecialchars($data['category']) ?> |
-        <?= date('d M Y H:i', strtotime($data['created_at'])) ?>
+        Ditulis oleh <strong><?= htmlspecialchars($data['author_name']) ?></strong> | 
+        Kategori: <?= htmlspecialchars($data['category']) ?> | 
+        Terakhir Diperbarui: <?= date('d M Y H:i', strtotime($articleTime)) ?>
     </p>
 
     <?php if (!empty($data['featured_image']) && isImage($data['featured_image'])): ?>
-        <img src="admin/uploads/articles/<?= htmlspecialchars(basename($data['featured_image'])) ?>" class="img-fluid my-3 rounded-corners" style="max-width: 100%; height: auto; max-height: 400px; object-fit: cover;">
+        <div class="text-center my-3">
+            <img src="admin/uploads/articles/<?= htmlspecialchars(basename($data['featured_image'])) ?>" class="img-fluid rounded-corners mx-auto d-block" style="max-width: 100%; height: auto; max-height: 400px; object-fit: cover;">
+        </div>
     <?php endif; ?>
 
     <div class="mb-5" style="white-space: pre-line;">
         <?= nl2br(htmlspecialchars($data['content'])) ?>
     </div>
-
 
 <!-- Previous and Next Post Navigation -->
 <div class="d-flex justify-content-between mb-4 px-3" style="gap: 1rem;">
@@ -657,7 +651,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <?php while ($row = mysqli_fetch_assoc($rekomendasi)) : ?>
         <div style="min-width: 250px;">
             <div class="mb-1 text-muted" style="font-size: 0.85rem;">
-                <?= date('d/m/Y', strtotime($row['created_at'])) ?>
+                <?= date('d/m/Y', strtotime((!empty($row['updated_at']) && $row['updated_at'] !== '0000-00-00 00:00:00') ? $row['updated_at'] : $row['created_at'])) ?>
             </div>
             <a href="artikel.php?slug=<?= urlencode($row['slug']) ?>" class="text-decoration-none fw-bold text-dark related-post-link">
                 <?= htmlspecialchars($row['title']) ?>
@@ -743,57 +737,56 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </footer>
 
-   <script>
-        document.addEventListener("DOMContentLoaded", function () {
-        const searchInput = document.querySelector("#searchInput");
-        const searchResults = document.querySelector("#searchResults");
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const searchInput = document.querySelector("#searchInput");
+    const searchResults = document.querySelector("#searchResults");
 
-        let timeout = null;
+    let timeout = null;
 
-        searchInput.addEventListener("input", function () {
-            clearTimeout(timeout);
-            const query = this.value.trim();
+    searchInput.addEventListener("input", function () {
+        clearTimeout(timeout);
+        const query = this.value.trim();
 
-            if (query.length < 2) {
-                searchResults.innerHTML = "";
-                searchResults.classList.add("hidden");
-                return;
-            }
+        if (query.length < 2) {
+            searchResults.innerHTML = "";
+            searchResults.classList.add("hidden");
+            return;
+        }
 
-            timeout = setTimeout(() => {
-                fetch(`search.php?query=${encodeURIComponent(query)}`)
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.length > 0) {
-                            let html = "";
-                            data.forEach(article => {
-                                html += `
-                                    <a href="artikel.php?slug=${encodeURIComponent(article.slug)}"
-                                       class="block px-4 py-2 hover:bg-gray-100 border-b border-gray-200 last:border-b-0 no-underline text-gray-900 hover:text-primary">
-                                        <div class="font-medium text-gray-900">${article.title}</div>
-                                        <div class="text-xs text-gray-500">${article.category} • ${new Date(article.created_at).toLocaleDateString('id-ID')}</div>
-                                    </a>
-                                `;
-                            });
-                            searchResults.innerHTML = html;
-                            searchResults.classList.remove("hidden");
-                        } else {
-                            searchResults.innerHTML = `<div class="px-4 py-2 text-gray-500">Tidak ada hasil</div>`;
-                            searchResults.classList.remove("hidden");
-                        }
-                    })
-                    .catch(err => console.error(err));
-            }, 300); // delay 300ms
-        });
-
-        // klik di luar -> sembunyikan popup
-        document.addEventListener("click", function (e) {
-            if (!searchResults.contains(e.target) && e.target !== searchInput) {
-                searchResults.classList.add("hidden");
-            }
-        });
+        timeout = setTimeout(() => {
+            fetch(`search.php?query=${encodeURIComponent(query)}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        let html = "";
+                        data.forEach(article => {
+                            html += `
+                                <a href="artikel.php?slug=${encodeURIComponent(article.slug)}"
+                                   class="block px-4 py-2 hover:bg-gray-100 border-b border-gray-200 last:border-b-0 no-underline text-gray-900 hover:text-primary">
+                                    <div class="font-medium text-gray-900">${article.title}</div>
+                                    <div class="text-xs text-gray-500">${article.category} • ${new Date(article.created_at).toLocaleDateString('id-ID')}</div>
+                                </a>
+                            `;
+                        });
+                        searchResults.innerHTML = html;
+                        searchResults.classList.remove("hidden");
+                    } else {
+                        searchResults.innerHTML = `<div class="px-4 py-2 text-gray-500">Tidak ada hasil</div>`;
+                        searchResults.classList.remove("hidden");
+                    }
+                })
+                .catch(err => console.error(err));
+        }, 300); // delay 300ms
     });
 
-    </script>
+    // klik di luar -> sembunyikan popup
+    document.addEventListener("click", function (e) {
+        if (!searchResults.contains(e.target) && e.target !== searchInput) {
+            searchResults.classList.add("hidden");
+        }
+    });
+});
+</script>
 </body>
 </html>
