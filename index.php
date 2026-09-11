@@ -367,7 +367,9 @@ while ($row = mysqli_fetch_assoc($kategori_query)) {
 
       <div class="user-section hidden sm:flex items-center">
             <?php if (isset($_SESSION['user'])): ?>
-                <span class="username text-sm mr-3"><?= htmlspecialchars($_SESSION['user']['username']) ?></span>
+                <a href="admin/dashboard.php" class="username text-sm mr-3 hover:underline font-semibold text-primary transition" title="Ke Dashboard Admin">
+                    <?= htmlspecialchars($_SESSION['user']['username']) ?>
+                </a>
                 <a href="admin/logout.php" class="logout-btn bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full text-sm transition">Logout</a>
             <?php else: ?>
                 <a href="admin/index.php" class="login-btn bg-primary hover:bg-primary-dark text-white px-3 py-1 rounded-full text-sm transition">Login</a>
