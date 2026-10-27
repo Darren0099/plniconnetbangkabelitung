@@ -1,55 +1,35 @@
-# ⚡ Website Artikel PLN Bangka Belitung
+# Portal Artikel PLN Iconnet Bangka Belitung
 
-Website portal informasi dan artikel resmi untuk menyajikan berita, pembaruan layanan, tips kelistrikan, serta edukasi publik seputar layanan PT PLN (Persero) Wilayah Bangka Belitung.
+Proyek **website informasi dan manajemen artikel** yang dikembangkan dalam konteks kegiatan web development dan publikasi digital selama magang di PLN Icon Plus Sumbagsel, dengan fokus konten wilayah Bangka Belitung.
 
----
+## Permasalahan
 
-## 📌 Fitur Utama
+Publikasi berita, tips, dan kegiatan wilayah perlu dikelola secara terstruktur. Menulis halaman HTML baru untuk setiap artikel membuat proses pembaruan konten lebih sulit bagi tim pengelola non-teknis.
 
-* **Portal Artikel & Berita:** Publikasi artikel terkini seputar kelistrikan, program promo, dan kegiatan PLN di wilayah Bangka Belitung.
-* **Kategori Artikel:** Pengelompokan konten (Edukasi, Promo, Berita Daerah, Pemeliharaan, Tips Hemat Energi).
-* **Pencarian & Filter:** Pencarian artikel berdasarkan kata kunci atau kategori.
-* **Tampilan Responsif:** Optimal di perangkat *mobile*, *tablet*, maupun *desktop*.
-* **Panel Admin (CMS):** Pengelolaan artikel (Tambah, Edit, Hapus) dan manajemen media/gambar.
+## Solusi yang dikembangkan
 
----
+- **Portal publik** dengan halaman berita dan artikel serta navigasi kategori.
+- **Pencarian dan filter** agar pembaca dapat menemukan informasi tertentu.
+- **Panel admin berbasis CMS** untuk membuat, mengubah, dan menghapus artikel.
+- **Manajemen media** untuk gambar dan materi pendukung publikasi.
+- **Tampilan responsif** untuk akses dari perangkat berbeda.
 
-## 🛠️ Teknologi yang Digunakan
+## Teknologi dan implementasi
 
-* **PHP** (92.4%) – Logika server, pemrosesan data, dan integrasi database.
-* **HTML5** (7.1%) – Struktur dan tata letak halaman web.
-* **CSS3** (0.5%) – Penataan gaya tampilan visual.
-* **Database:** MySQL / MariaDB
+| Teknologi | Fungsi |
+| --- | --- |
+| PHP | Pengolahan request dan logika backend |
+| MySQL / MariaDB | Penyimpanan artikel dan data aplikasi |
+| HTML, CSS, JavaScript | Antarmuka publik dan admin |
+| PHPMailer | Library untuk fungsi pengiriman email yang ada di kode |
+| Apache / .htaccess | Pengaturan akses dan routing pada hosting PHP |
 
----
+Implementasi portal dan dashboard admin terdapat pada berkas PHP root serta direktori `admin/`.
 
-## 🚀 Panduan Instalasi (Lokal)
+## Hasil
 
-Ikuti langkah-langkah berikut untuk menjalankan proyek di server lokal (XAMPP / Laragon):
+Website menyediakan **alur pengelolaan publikasi terpisah antara admin dan pembaca**, dari penulisan konten hingga tampilan artikel di portal. Repository ini mendokumentasikan implementasi aplikasi; belum ada pengukuran yang dapat diverifikasi untuk klaim waktu publikasi, uptime, atau jumlah pembaca.
 
-### 1. Klon / Unduh Repositori
-Pindahkan direktori proyek ke dalam folder server web Anda (`htdocs` untuk XAMPP atau `www` untuk Laragon):
-```bash
-cd C:/xampp/htdocs/
-git clone [https://github.com/username/website-artikel-pln-babel.git](https://github.com/username/website-artikel-pln-babel.git) 
+**Demo:** https://plniconnetbangkabelitung.ct.ws/
 
-### 2. Import Database
-Buka phpMyAdmin (http://localhost/phpmyadmin).
-
-Buat database baru, misalnya dengan nama db_pln_babel.
-
-Import file database yang berada di dalam folder proyek (contoh: database/db_pln_babel.sql).
-
-3. Konfigurasi Koneksi Database
-Sesuaikan kredensial database pada file konfigurasi (misalnya config/koneksi.php atau config/database.php):
-
-PHP
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "db_pln_babel";
-4. Jalankan Aplikasi
-Buka browser dan akses URL berikut:
-
-Plaintext
-http://localhost/website-artikel-pln-babel
+> Portofolio pengembangan ini tidak dimaksudkan sebagai pernyataan resmi atau pengesahan institusi.
